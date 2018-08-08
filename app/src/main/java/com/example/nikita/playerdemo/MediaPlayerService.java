@@ -24,11 +24,14 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-
+import android.widget.Toast;
 
 
 import java.io.IOException;
 import java.util.ArrayList;
+
+//import static com.example.nikita.playerdemo.MainActivity.Broadcast_PAUSE_AUDIO;
+import static com.example.nikita.playerdemo.MainActivity.Broadcast_PLAY_NEW_AUDIO;
 
 public class MediaPlayerService extends Service implements MediaPlayer.OnCompletionListener,
         MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnSeekCompleteListener,
@@ -53,11 +56,11 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
 
 // Binder given to clients
 private final IBinder iBinder = new LocalBinder();
-    public static final String ACTION_PLAY = "com.valdioveliu.valdio.audioplayer.ACTION_PLAY";
-    public static final String ACTION_PAUSE = "com.valdioveliu.valdio.audioplayer.ACTION_PAUSE";
-    public static final String ACTION_PREVIOUS = "com.valdioveliu.valdio.audioplayer.ACTION_PREVIOUS";
-    public static final String ACTION_NEXT = "com.valdioveliu.valdio.audioplayer.ACTION_NEXT";
-    public static final String ACTION_STOP = "com.valdioveliu.valdio.audioplayer.ACTION_STOP";
+    public static final String ACTION_PLAY = "com.example.nikita.playerdemo.ACTION_PLAY";
+    public static final String ACTION_PAUSE = "com.example.nikita.playerdemo.ACTION_PAUSE";
+    public static final String ACTION_PREVIOUS = "com.example.nikita.playerdemo.ACTION_PREVIOUS";
+    public static final String ACTION_NEXT = "com.example.nikita.playerdemo.ACTION_NEXT";
+    public static final String ACTION_STOP = "com.example.nikita.playerdemo.ACTION_STOP";
 
     //MediaSession
     private MediaSessionManager mediaSessionManager;
@@ -79,6 +82,10 @@ private final IBinder iBinder = new LocalBinder();
         registerBecomingNoisyReceiver();
         //Listen for new Audio to play -- BroadcastReceiver
         register_playNewAudio();
+       /* register_pauseAudio();*/
+
+
+
     }
     @Override
     public void onDestroy() {
@@ -98,6 +105,8 @@ private final IBinder iBinder = new LocalBinder();
         //unregister BroadcastReceivers
         unregisterReceiver(becomingNoisyReceiver);
         unregisterReceiver(playNewAudio);
+       /* unregisterReceiver(pauseAudio);*/
+
 
         //clear cached playlist
         new StorageUtil(getApplicationContext()).clearCachedAudioPlaylist();
@@ -150,7 +159,9 @@ public boolean onInfo(MediaPlayer mp, int what, int extra) {
     @Override
     public void onPrepared(MediaPlayer mp) {
         //Invoked when the media source is ready for playback.
+        Log.i("onPrepared", "playmedia");
         playMedia();
+
     }
 @Override
 public void onSeekComplete(MediaPlayer mp) {
@@ -232,8 +243,10 @@ public class LocalBinder extends Binder {
     }
   //  if statements to make sure there are no problems while playing media
   private void playMedia() {
+      Log.i("playmedia", "MediaPlayer.start()");
       if (!mediaPlayer.isPlaying()) {
           mediaPlayer.start();
+
       }
   }
 
@@ -245,14 +258,20 @@ public class LocalBinder extends Binder {
     }
 
     private void pauseMedia() {
+
         if (mediaPlayer.isPlaying()) {
+            Toast.makeText(getApplicationContext(),"pause media",Toast.LENGTH_SHORT).show();
             mediaPlayer.pause();
             resumePosition = mediaPlayer.getCurrentPosition();
+
+
         }
     }
 
     private void resumeMedia() {
+
         if (!mediaPlayer.isPlaying()) {
+            Toast.makeText(getApplicationContext(),"resume media",Toast.LENGTH_SHORT).show();
             mediaPlayer.seekTo(resumePosition);
             mediaPlayer.start();
         }
@@ -272,7 +291,7 @@ public class LocalBinder extends Binder {
         public void onReceive(Context context, Intent intent) {
             //pause audio on ACTION_AUDIO_BECOMING_NOISY
             pauseMedia();
-            //buildNotification(PlaybackStatus.PAUSED);
+            buildNotification(PlaybackStatus.PAUSED);
         }
     };
 
@@ -320,30 +339,62 @@ public class LocalBinder extends Binder {
         @Override
         public void onReceive(Context context, Intent intent) {
 
-            //Get the new media index form SharedPreferences
-            audioIndex = new StorageUtil(getApplicationContext()).loadAudioIndex();
-            if (audioIndex != -1 && audioIndex < audioList.size()) {
-                //index is in a valid range
-                activeAudio = audioList.get(audioIndex);
-            } else {
-                stopSelf();
-            }
+            if (intent.getAction().equals(Broadcast_PLAY_NEW_AUDIO)) {
+                Log.i("PlaynewAudio","play");
 
-            //A PLAY_NEW_AUDIO action received
-            //reset mediaPlayer to play the new Audio
-            stopMedia();
-            mediaPlayer.reset();
-            initMediaPlayer();
-            updateMetaData();
-            buildNotification(PlaybackStatus.PLAYING);
+                //Get the new media index form SharedPreferences
+                audioIndex = new StorageUtil(getApplicationContext()).loadAudioIndex();
+                if (audioIndex != -1 && audioIndex < audioList.size()) {
+                    //index is in a valid range
+                    activeAudio = audioList.get(audioIndex);
+                } else {
+                    stopSelf();
+                }
+
+                //A PLAY_NEW_AUDIO action received
+                //reset mediaPlayer to play the new Audio
+                stopMedia();
+                mediaPlayer.reset();
+                initMediaPlayer();
+                updateMetaData();
+                buildNotification(PlaybackStatus.PLAYING);
+            }
         }
     };
+    /*private void pauseAudio = new BroadcastReceiver() {*/
+
+       /* @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(Broadcast_PAUSE_AUDIO)){
+                *//*Log.i("broadcast", "init br pause audio ");
+                if (audioManager.isMusicActive())  {
+                    Log.i("broadcast", "resume media ");
+                    playMedia();
+                    buildNotification(PlaybackStatus.PLAYING);
+
+                }*//*
+
+                   *//* Log.i("broadcast", "pause media");
+                    transportControls.pause();
+                    buildNotification(PlaybackStatus.PAUSED);
+*//*
+           }
+        }
+    };*/
+
+
 
     private void register_playNewAudio() {
         //Register playNewMedia receiver
-        IntentFilter filter = new IntentFilter(MainActivity.Broadcast_PLAY_NEW_AUDIO);
+        IntentFilter filter = new IntentFilter(Broadcast_PLAY_NEW_AUDIO);
         registerReceiver(playNewAudio, filter);
     }
+ /*   private void register_pauseAudio() {
+        //Register  receiver
+        IntentFilter filter = new IntentFilter(MainActivity.Broadcast_PAUSE_AUDIO);
+        registerReceiver(pauseAudio, filter);
+    }*/
+
     private void initMediaSession() throws RemoteException {
         if (mediaSessionManager != null) return; //mediaSessionManager exists
 
@@ -366,6 +417,7 @@ public class LocalBinder extends Binder {
             // Implement callbacks
             @Override
             public void onPlay() {
+                Log.i("onPlay","play media");
                 super.onPlay();
                 resumeMedia();
                 buildNotification(PlaybackStatus.PLAYING);
@@ -373,7 +425,9 @@ public class LocalBinder extends Binder {
 
             @Override
             public void onPause() {
+                Log.i("onPause","pause media");
                 super.onPause();
+
                 pauseMedia();
                 buildNotification(PlaybackStatus.PAUSED);
             }
@@ -477,10 +531,15 @@ public class LocalBinder extends Binder {
 
         Bitmap largeIcon = BitmapFactory.decodeResource(getResources(),
                 R.drawable.image); //replace with your own image
-
+        String PlayStatus = "PAUSE";
+        if(playbackStatus == PlaybackStatus.PAUSED){
+            PlayStatus = "PLAY";
+        }
         // Create a new Notification
         NotificationCompat.Builder notificationBuilder = (NotificationCompat.Builder) new NotificationCompat.Builder(this)
                 .setShowWhen(false)
+
+
                 // Set the Notification style
                // .setStyle(new NotificationCompat.MediaStyle()
                         // Attach our MediaSession token
@@ -498,7 +557,8 @@ public class LocalBinder extends Binder {
                 .setContentInfo(activeAudio.getTitle())
                 // Add playback actions
                 .addAction(android.R.drawable.ic_media_previous, "previous", playbackAction(3))
-                .addAction(notificationAction, "pause", play_pauseAction)
+
+                .addAction(notificationAction, PlayStatus, play_pauseAction)
                 .addAction(android.R.drawable.ic_media_next, "next", playbackAction(2));
 
         ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).notify(NOTIFICATION_ID, notificationBuilder.build());
@@ -548,6 +608,8 @@ public class LocalBinder extends Binder {
             transportControls.stop();
         }
     }
+
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         try {
@@ -586,5 +648,36 @@ public class LocalBinder extends Binder {
         //Handle Intent action from MediaSession.TransportControls
         handleIncomingActions(intent);
         return super.onStartCommand(intent, flags, startId);
+    }
+    /**methods for musiccontroller*/
+    public int getPosn(){
+        return mediaPlayer.getCurrentPosition();
+    }
+
+    public int getDur(){
+        return mediaPlayer.getDuration();
+    }
+
+    public boolean isPng(){
+        return mediaPlayer.isPlaying();
+    }
+
+    public void pausePlayer(){
+        mediaPlayer.pause();
+    }
+
+    public void seek(int posn){
+        mediaPlayer.seekTo(posn);
+    }
+
+    public void go(){
+        mediaPlayer.start();
+    }
+    public void playPrev(){
+        skipToPrevious();
+    }
+    //skip to next
+    public void playNext(){
+        skipToNext();
     }
 }

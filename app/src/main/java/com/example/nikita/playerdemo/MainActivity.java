@@ -1,5 +1,6 @@
 package com.example.nikita.playerdemo;
 
+import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -9,20 +10,47 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.design.internal.BottomNavigationMenu;
+import android.support.design.widget.BottomNavigationView;
+import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.MediaController;
 import android.widget.Toast;
+import android.widget.Toolbar;
+import android.widget.MediaController.MediaPlayerControl;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+import javax.xml.datatype.Duration;
+
+public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener, MediaPlayerControl{
     private MediaPlayerService player;
     boolean serviceBound = false;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
+    public static final String Broadcast_PAUSE_AUDIO = "com.example.nikita.playerdemo";
+    public static final String Broadcast_RESUME_AUDIO = "com.example.nikita.playerdemo";
     ArrayList<Audio> audioList;
+    private MusicController controller;
+    RecyclerView recyclerView;
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+        switch (menuItem.getItemId()){
+            case R.id.play_song:
+//todo
+            case R.id.pause_song:
+
+                pauseAudio();
+        }
+        return false;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,11 +59,20 @@ public class MainActivity extends AppCompatActivity {
         loadAudio();
         initRecyclerView();
 
-      //  playAudio("https://upload.wikimedia.org/wikipedia/commons/6/6c/Grieg_Lyric_Pieces_Kobold.ogg");
+        BottomNavigationView myToolbar = (BottomNavigationView) findViewById(R.id.navigationView);
+        myToolbar.setOnNavigationItemSelectedListener(this);
+
+        setController();
+
+
+
+
+
+
     }
     private void initRecyclerView() {
         if (audioList.size() > 0) {
-            RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recyclerview);
+            recyclerView = (RecyclerView) findViewById(R.id.recyclerview);
             RecyclerView_Adapter adapter = new RecyclerView_Adapter(audioList, getApplication());
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -43,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View view, int index) {
                     playAudio(index);
+                    controller.show();
                 }
             }));
 
@@ -67,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
     };
     private void playAudio(int audioIndex) {
         //Check is service is active
+
         if (!serviceBound) {
             //Store Serializable audioList to SharedPreferences
             StorageUtil storage = new StorageUtil(getApplicationContext());
@@ -87,6 +126,8 @@ public class MainActivity extends AppCompatActivity {
             sendBroadcast(broadcastIntent);
         }
     }
+
+
     //retrieves the data from the device in ascending order
     private void loadAudio() {
         ContentResolver contentResolver = getContentResolver();
@@ -110,7 +151,15 @@ public class MainActivity extends AppCompatActivity {
         }
         cursor.close();
     }
+    /**menu*/
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
     /** life-cycle methods*/
+
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         savedInstanceState.putBoolean("ServiceState", serviceBound);
@@ -132,4 +181,103 @@ public class MainActivity extends AppCompatActivity {
             player.stopSelf();
         }
     }
+
+/**methods for MediaController*/
+
+private void setController(){
+    controller = new MusicController(this);
+    controller.setMediaPlayer(this);
+    controller.setAnchorView(recyclerView);
+    controller.setEnabled(true);
+
+
+
+
+
+
+    controller.setPrevNextListeners(new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            player.playNext();
+
+        }
+    },
+            new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            player.playPrev();
+
+        }
+    });
+
+}
+
+    @Override
+    public void start() {
+        if (serviceBound)
+            player.go();
+    }
+
+    @Override
+    public void pause() {
+        if (serviceBound)
+            player.pausePlayer();
+    }
+
+    @Override
+    public int getDuration() {
+        if (serviceBound){
+            return player.getDur();
+        }
+        else
+            return 0;
+    }
+
+    @Override
+    public int getCurrentPosition() {
+    if (serviceBound){
+        return player.getPosn();
+    }
+    else
+        return 0;
+    }
+
+    @Override
+    public void seekTo(int pos) {
+        if (serviceBound)
+            player.seek(pos);
+
+
+    }
+
+    @Override
+    public boolean isPlaying() {
+        return false;
+    }
+
+    @Override
+    public int getBufferPercentage() {
+        return 0;
+    }
+
+    @Override
+    public boolean canPause() {
+        return true;
+    }
+
+    @Override
+    public boolean canSeekBackward() {
+        return true;
+    }
+
+    @Override
+    public boolean canSeekForward() {
+        return true;
+    }
+
+    @Override
+    public int getAudioSessionId() {
+        return 0;
+    }
+
 }

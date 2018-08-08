@@ -58,6 +58,6 @@ class ViewHolder extends RecyclerView.ViewHolder {
     ViewHolder(View itemView) {
         super(itemView);
         title = (TextView) itemView.findViewById(R.id.title);
-        play_pause = (ImageView) itemView.findViewById(R.id.play_pause);
+       // play_pause = (ImageView) itemView.findViewById(R.id.play_pause);
     }
 }
