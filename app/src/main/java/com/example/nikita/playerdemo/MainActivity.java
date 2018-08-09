@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -22,6 +23,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.MediaController;
+import android.widget.SeekBar;
 import android.widget.Toast;
 import android.widget.Toolbar;
 import android.widget.MediaController.MediaPlayerControl;
@@ -38,16 +40,22 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     public static final String Broadcast_PAUSE_AUDIO = "com.example.nikita.playerdemo";
     public static final String Broadcast_RESUME_AUDIO = "com.example.nikita.playerdemo";
     ArrayList<Audio> audioList;
-    private MusicController controller;
     RecyclerView recyclerView;
+    SeekBar seekBar;
+    Runnable runnable;
+    Handler handler;
+
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
         switch (menuItem.getItemId()){
             case R.id.play_song:
-//todo
-            case R.id.pause_song:
+                start();
 
-                pauseAudio();
+
+//todo
+
+
+
         }
         return false;
     }
@@ -61,10 +69,6 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
         BottomNavigationView myToolbar = (BottomNavigationView) findViewById(R.id.navigationView);
         myToolbar.setOnNavigationItemSelectedListener(this);
-
-        setController();
-
-
 
 
 
@@ -80,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 @Override
                 public void onClick(View view, int index) {
                     playAudio(index);
-                    controller.show();
+
                 }
             }));
 
@@ -95,7 +99,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             player = binder.getService();
             serviceBound = true;
 
-            Toast.makeText(MainActivity.this, "Service Bound", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(MainActivity.this, "Service Bound", Toast.LENGTH_SHORT).show();
+            initSeekBar();
+            handler = new Handler();
+            seekPosition();
         }
 
         @Override
@@ -179,52 +186,25 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             unbindService(serviceConnection);
             //service is active
             player.stopSelf();
+
         }
     }
 
-/**methods for MediaController*/
-
-private void setController(){
-    controller = new MusicController(this);
-    controller.setMediaPlayer(this);
-    controller.setAnchorView(recyclerView);
-    controller.setEnabled(true);
+/**methods for bottom menu*/
 
 
-
-
-
-
-    controller.setPrevNextListeners(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            player.playNext();
-
-        }
-    },
-            new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            player.playPrev();
-
-        }
-    });
-
-}
-
-    @Override
     public void start() {
         if (serviceBound)
             player.go();
     }
 
-    @Override
+
     public void pause() {
         if (serviceBound)
             player.pausePlayer();
     }
 
-    @Override
+
     public int getDuration() {
         if (serviceBound){
             return player.getDur();
@@ -233,7 +213,7 @@ private void setController(){
             return 0;
     }
 
-    @Override
+
     public int getCurrentPosition() {
     if (serviceBound){
         return player.getPosn();
@@ -242,7 +222,7 @@ private void setController(){
         return 0;
     }
 
-    @Override
+
     public void seekTo(int pos) {
         if (serviceBound)
             player.seek(pos);
@@ -279,5 +259,36 @@ private void setController(){
     public int getAudioSessionId() {
         return 0;
     }
+   private void initSeekBar(){
+    seekBar = (SeekBar)findViewById(R.id.seekBar3);
+    seekBar.setMax(getDuration());
+    seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
+         if(input){player.seek(progress);}
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+
+        }
+    });
+    }
+    private void seekPosition(){
+        seekBar.setProgress(player.getPosn());
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                seekPosition();
+            }
+        };
+        handler.postDelayed(runnable,1000);
+    }
+
 
 }

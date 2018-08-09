@@ -663,15 +663,18 @@ public class LocalBinder extends Binder {
     }
 
     public void pausePlayer(){
-        mediaPlayer.pause();
+        transportControls.pause();
     }
 
     public void seek(int posn){
         mediaPlayer.seekTo(posn);
     }
+    public boolean isPlaying(){
+        return mediaPlayer.isPlaying();
+    }
 
     public void go(){
-        mediaPlayer.start();
+        transportControls.play();
     }
     public void playPrev(){
         skipToPrevious();
