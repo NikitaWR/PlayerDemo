@@ -22,6 +22,9 @@ import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.SeekBar;
 import android.widget.Toast;
@@ -33,7 +36,7 @@ import java.util.List;
 
 import javax.xml.datatype.Duration;
 
-public class MainActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener, MediaPlayerControl{
+public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
     private MediaPlayerService player;
     boolean serviceBound = false;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
@@ -44,21 +47,10 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     SeekBar seekBar;
     Runnable runnable;
     Handler handler;
+    ImageButton play;
+    ImageButton previous;
+    ImageButton next;
 
-    @Override
-    public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-        switch (menuItem.getItemId()){
-            case R.id.play_song:
-                start();
-
-
-//todo
-
-
-
-        }
-        return false;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,13 +59,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         loadAudio();
         initRecyclerView();
 
-        BottomNavigationView myToolbar = (BottomNavigationView) findViewById(R.id.navigationView);
-        myToolbar.setOnNavigationItemSelectedListener(this);
-
-
-
 
     }
+
     private void initRecyclerView() {
         if (audioList.size() > 0) {
             recyclerView = (RecyclerView) findViewById(R.id.recyclerview);
@@ -90,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
         }
     }
+
     //Binding this Client to the AudioPlayer Service
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -101,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
             //Toast.makeText(MainActivity.this, "Service Bound", Toast.LENGTH_SHORT).show();
             initSeekBar();
+            initPlayMenu();
             handler = new Handler();
             seekPosition();
         }
@@ -110,6 +100,7 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
             serviceBound = false;
         }
     };
+
     private void playAudio(int audioIndex) {
         //Check is service is active
 
@@ -158,14 +149,19 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         }
         cursor.close();
     }
-    /**menu*/
+
+    /**
+     * menu
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
-    /** life-cycle methods*/
+    /**
+     * life-cycle methods
+     */
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -190,7 +186,9 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
         }
     }
 
-/**methods for bottom menu*/
+    /**
+     * methods for bottom menu
+     */
 
 
     public void start() {
@@ -206,20 +204,18 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
 
 
     public int getDuration() {
-        if (serviceBound){
+        if (serviceBound) {
             return player.getDur();
-        }
-        else
+        } else
             return 0;
     }
 
 
     public int getCurrentPosition() {
-    if (serviceBound){
-        return player.getPosn();
-    }
-    else
-        return 0;
+        if (serviceBound) {
+            return player.getPosn();
+        } else
+            return 0;
     }
 
 
@@ -259,27 +255,37 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
     public int getAudioSessionId() {
         return 0;
     }
-   private void initSeekBar(){
-    seekBar = (SeekBar)findViewById(R.id.seekBar3);
-    seekBar.setMax(getDuration());
-    seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-        @Override
-        public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
-         if(input){player.seek(progress);}
-        }
 
-        @Override
-        public void onStartTrackingTouch(SeekBar seekBar) {
 
-        }
+    /**
+     * seekbar zone
+     */
+    private void initSeekBar() {
 
-        @Override
-        public void onStopTrackingTouch(SeekBar seekBar) {
+        seekBar = (SeekBar) findViewById(R.id.seekBar3);
+        seekBar.setMax(getDuration());
+        seekBar.setVisibility(View.VISIBLE);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
+                if (input) {
+                    player.seek(progress);
+                }
+            }
 
-        }
-    });
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
-    private void seekPosition(){
+
+    private void seekPosition() {
         seekBar.setProgress(player.getPosn());
         runnable = new Runnable() {
             @Override
@@ -287,8 +293,38 @@ public class MainActivity extends AppCompatActivity implements BottomNavigationV
                 seekPosition();
             }
         };
-        handler.postDelayed(runnable,1000);
+        handler.postDelayed(runnable, 1000);
     }
 
+    private void initPlayMenu() {
+        LinearLayout playMenu = (LinearLayout) findViewById(R.id.play_menu_layout);
+        play = (ImageButton) findViewById(R.id.play);
+        previous = (ImageButton) findViewById(R.id.previous);
+        next = (ImageButton) findViewById(R.id.next);
 
+        previous.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                player.playPrev();
+            }
+        });
+        next.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                player.playNext();
+            }
+        });
+        play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (player.isPng()){
+                    pause();
+                play.setImageResource(R.drawable.ic_action_play);}
+                if (!player.isPng()) {
+                start();
+                play.setImageResource(R.drawable.ic_action_pause);}
+            }
+
+        });
+    }
 }
