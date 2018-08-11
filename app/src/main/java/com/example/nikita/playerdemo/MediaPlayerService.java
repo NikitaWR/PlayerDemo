@@ -24,7 +24,6 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.widget.Toast;
 
 
 import java.io.IOException;
@@ -126,9 +125,10 @@ public void onBufferingUpdate(MediaPlayer mp, int percent) {
 public void onCompletion(MediaPlayer mp) {
         //Invoked when playback of a media source has completed.
 
-    stopMedia();
+    //stopMedia();
+    transportControls.skipToNext();
     //stop the service
-    stopSelf();
+    //stopSelf();
         }
 
 
@@ -260,7 +260,7 @@ public class LocalBinder extends Binder {
     private void pauseMedia() {
 
         if (mediaPlayer.isPlaying()) {
-            Toast.makeText(getApplicationContext(),"pause media",Toast.LENGTH_SHORT).show();
+           // Toast.makeText(getApplicationContext(),"pause media",Toast.LENGTH_SHORT).show();
             mediaPlayer.pause();
             resumePosition = mediaPlayer.getCurrentPosition();
 
@@ -271,7 +271,7 @@ public class LocalBinder extends Binder {
     private void resumeMedia() {
 
         if (!mediaPlayer.isPlaying()) {
-            Toast.makeText(getApplicationContext(),"resume media",Toast.LENGTH_SHORT).show();
+           // Toast.makeText(getApplicationContext(),"resume media",Toast.LENGTH_SHORT).show();
             mediaPlayer.seekTo(resumePosition);
             mediaPlayer.start();
         }
@@ -361,27 +361,6 @@ public class LocalBinder extends Binder {
             }
         }
     };
-    /*private void pauseAudio = new BroadcastReceiver() {*/
-
-       /* @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(Broadcast_PAUSE_AUDIO)){
-                *//*Log.i("broadcast", "init br pause audio ");
-                if (audioManager.isMusicActive())  {
-                    Log.i("broadcast", "resume media ");
-                    playMedia();
-                    buildNotification(PlaybackStatus.PLAYING);
-
-                }*//*
-
-                   *//* Log.i("broadcast", "pause media");
-                    transportControls.pause();
-                    buildNotification(PlaybackStatus.PAUSED);
-*//*
-           }
-        }
-    };*/
-
 
 
     private void register_playNewAudio() {
@@ -518,9 +497,14 @@ public class LocalBinder extends Binder {
         int notificationAction = android.R.drawable.ic_media_pause;//needs to be initialized
         PendingIntent play_pauseAction = null;
 
+        Piotrek piotrek = new Piotrek();
+        piotrek.mainActivity.buildNotification(playbackStatus);
+
         //Build a new notification according to the current state of the MediaPlayer
         if (playbackStatus == PlaybackStatus.PLAYING) {
             notificationAction = android.R.drawable.ic_media_pause;
+
+
             //create the pause action
             play_pauseAction = playbackAction(1);
         } else if (playbackStatus == PlaybackStatus.PAUSED) {
@@ -651,6 +635,7 @@ public class LocalBinder extends Binder {
     }
     /**methods for musiccontroller*/
     public int getPosn(){
+
         return mediaPlayer.getCurrentPosition();
     }
 
@@ -677,10 +662,10 @@ public class LocalBinder extends Binder {
         transportControls.play();
     }
     public void playPrev(){
-        skipToPrevious();
+       transportControls.skipToPrevious();
     }
     //skip to next
     public void playNext(){
-        skipToNext();
+        transportControls.skipToNext();
     }
 }

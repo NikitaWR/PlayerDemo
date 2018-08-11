@@ -1,40 +1,30 @@
 package com.example.nikita.playerdemo;
 
-import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
-import android.support.annotation.NonNull;
-import android.support.design.internal.BottomNavigationMenu;
-import android.support.design.widget.BottomNavigationView;
-import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.MediaController;
 import android.widget.SeekBar;
-import android.widget.Toast;
-import android.widget.Toolbar;
 import android.widget.MediaController.MediaPlayerControl;
+import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
-
-import javax.xml.datatype.Duration;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
     private MediaPlayerService player;
@@ -50,12 +40,18 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     ImageButton play;
     ImageButton previous;
     ImageButton next;
+    TextView songCurrentDuration;
+    TextView songTotalDuration;
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        Piotrek.mainActivity=this;
+
         loadAudio();
         initRecyclerView();
 
@@ -89,10 +85,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             serviceBound = true;
 
             //Toast.makeText(MainActivity.this, "Service Bound", Toast.LENGTH_SHORT).show();
+
+            /*ViewGroup contentMain = (ViewGroup) findViewById(R.id.content_main);
+            View view = findViewById(R.id.play_menu_layout);
+            contentMain.addView(view);*/
+
             initSeekBar();
             initPlayMenu();
+            LinearLayout playMenu = findViewById(R.id.play_menu);
+            playMenu.setVisibility(View.VISIBLE);
+
             handler = new Handler();
             seekPosition();
+
         }
 
         @Override
@@ -212,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public int getCurrentPosition() {
-        if (serviceBound) {
+        if (seekBar!=null) {
             return player.getPosn();
         } else
             return 0;
@@ -264,7 +269,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
         seekBar = (SeekBar) findViewById(R.id.seekBar3);
         seekBar.setMax(getDuration());
-        seekBar.setVisibility(View.VISIBLE);
+        /*seekBar.setVisibility(View.VISIBLE);*/
+
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
@@ -286,16 +292,31 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     private void seekPosition() {
-        seekBar.setProgress(player.getPosn());
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-                seekPosition();
-            }
-        };
-        handler.postDelayed(runnable, 1000);
-    }
+        try{ //todo zrobić poludzku
+            long totalDuration = getDuration();
+            long currentDuration = getCurrentPosition();
 
+
+            seekBar.setProgress(player.getPosn());
+
+            songTotalDuration=findViewById(R.id.songTotalDuration);
+            songCurrentDuration=(TextView)findViewById(R.id.songCurrentDuration);
+            // Displaying Total Duration time
+            // (целое число минут, общее время в сек - целое число минут выраженое в сек)
+            songTotalDuration.setText(String.format("%d:%02d",(totalDuration / (1000*60)) % 60 , totalDuration/1000 - ((totalDuration / (1000*60)) % 60) *60)
+            );
+             //Displaying time completed playing
+            songCurrentDuration.setText(String.format("%d:%02d",(currentDuration / (1000*60)) % 60 , currentDuration/1000 - ((currentDuration / (1000*60)) % 60) *60)
+            );
+            runnable = new Runnable() {
+                @Override
+                public void run() {
+                    seekPosition();
+                }
+            };
+            handler.postDelayed(runnable, 1000);
+        }catch (Exception exc){exc.printStackTrace();}
+    }
     private void initPlayMenu() {
         LinearLayout playMenu = (LinearLayout) findViewById(R.id.play_menu_layout);
         play = (ImageButton) findViewById(R.id.play);
@@ -319,12 +340,22 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             public void onClick(View v) {
                 if (player.isPng()){
                     pause();
-                play.setImageResource(R.drawable.ic_action_play);}
+                }
                 if (!player.isPng()) {
                 start();
-                play.setImageResource(R.drawable.ic_action_pause);}
+                }
             }
 
         });
+    }
+    public void buildNotification(PlaybackStatus playbackStatus){
+        if (serviceBound) {
+            if (playbackStatus == PlaybackStatus.PLAYING) {
+                play.setImageResource(R.drawable.ic_action_pause);
+
+            } else if (playbackStatus == PlaybackStatus.PAUSED) {
+                play.setImageResource(R.drawable.ic_action_play);
+            }
+        }
     }
 }
