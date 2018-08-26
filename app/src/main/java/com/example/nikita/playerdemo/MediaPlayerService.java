@@ -24,6 +24,7 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 
 import java.io.IOException;
@@ -201,12 +202,8 @@ public void onSeekComplete(MediaPlayer mp) {
     private boolean requestAudioFocus() {
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         int result = audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
-        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            //Focus gained
-            return true;
-        }
+        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
         //Could not gain focus
-        return false;
     }
 
     private boolean removeAudioFocus() {
@@ -374,7 +371,7 @@ public class LocalBinder extends Binder {
         registerReceiver(pauseAudio, filter);
     }*/
 
-    private void initMediaSession() throws RemoteException {
+    private void initMediaSession() {
         if (mediaSessionManager != null) return; //mediaSessionManager exists
 
         mediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
@@ -498,7 +495,7 @@ public class LocalBinder extends Binder {
         PendingIntent play_pauseAction = null;
 
         Piotrek piotrek = new Piotrek();
-        piotrek.mainActivity.buildNotification(playbackStatus);
+        Piotrek.mainActivity.buildNotification(playbackStatus);
 
         //Build a new notification according to the current state of the MediaPlayer
         if (playbackStatus == PlaybackStatus.PLAYING) {
@@ -520,7 +517,7 @@ public class LocalBinder extends Binder {
             PlayStatus = "PLAY";
         }
         // Create a new Notification
-        NotificationCompat.Builder notificationBuilder = (NotificationCompat.Builder) new NotificationCompat.Builder(this)
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
                 .setShowWhen(false)
 
 

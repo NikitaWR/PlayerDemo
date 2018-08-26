@@ -11,17 +11,26 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.EditText;
+import android.widget.FilterQueryProvider;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.MediaController.MediaPlayerControl;
 import android.widget.TextView;
+import android.widget.Toast;
+import de.greenrobot.event.EventBus;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -30,9 +39,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     private MediaPlayerService player;
     boolean serviceBound = false;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
-    public static final String Broadcast_PAUSE_AUDIO = "com.example.nikita.playerdemo";
-    public static final String Broadcast_RESUME_AUDIO = "com.example.nikita.playerdemo";
     ArrayList<Audio> audioList;
+    ArrayList<Audio> audioSortedList;
     RecyclerView recyclerView;
     SeekBar seekBar;
     Runnable runnable;
@@ -42,25 +50,24 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     ImageButton next;
     TextView songCurrentDuration;
     TextView songTotalDuration;
+    SQLAdapter dbHelper;
+    private SimpleCursorAdapter dataAdapter;
 
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        recyclerView = findViewById(R.id.recyclerview);
         Piotrek.mainActivity=this;
-
         loadAudio();
-        initRecyclerView();
-
-
     }
 
     private void initRecyclerView() {
         if (audioList.size() > 0) {
-            recyclerView = (RecyclerView) findViewById(R.id.recyclerview);
             RecyclerView_Adapter adapter = new RecyclerView_Adapter(audioList, getApplication());
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -68,13 +75,10 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 @Override
                 public void onClick(View view, int index) {
                     playAudio(index);
-
                 }
             }));
-
         }
     }
-
     //Binding this Client to the AudioPlayer Service
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -85,10 +89,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             serviceBound = true;
 
             //Toast.makeText(MainActivity.this, "Service Bound", Toast.LENGTH_SHORT).show();
-
-            /*ViewGroup contentMain = (ViewGroup) findViewById(R.id.content_main);
-            View view = findViewById(R.id.play_menu_layout);
-            contentMain.addView(view);*/
 
             initSeekBar();
             initPlayMenu();
@@ -141,20 +141,40 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         Cursor cursor = contentResolver.query(uri, null, selection, null, sortOrder);
 
         if (cursor != null && cursor.getCount() > 0) {
-            audioList = new ArrayList<>();
+            creatDB();
             while (cursor.moveToNext()) {
                 String data = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
                 String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                 String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
-
-                // Save to audioList
-                audioList.add(new Audio(data, title, album, artist));
+                dbHelper.createAudio(data,title,album,artist);
             }
+            loadData();
         }
         cursor.close();
     }
+    //writes data to DB
+      void creatDB(){
+         dbHelper = new SQLAdapter(this);
+         dbHelper.open();
+         dbHelper.deleteAllAudios();
+          }
 
+     //load audio from db
+      void loadData() {
+          audioList = new ArrayList<>();
+         Cursor cursor = dbHelper.fetchAllClients();
+         while (cursor.moveToNext()) {
+             Audio audio = new Audio((cursor.getString(
+                     cursor.getColumnIndex("data"))),
+                     cursor.getString(cursor.getColumnIndex("title")),
+                     cursor.getString(cursor.getColumnIndex("album")),
+                     cursor.getString(cursor.getColumnIndex("artist"))
+                     );
+                 audioList.add(audio);
+             }
+          initRecyclerView();
+     }
     /**
      * menu
      */
@@ -267,7 +287,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
      */
     private void initSeekBar() {
 
-        seekBar = (SeekBar) findViewById(R.id.seekBar3);
+        seekBar = findViewById(R.id.seekBar3);
         seekBar.setMax(getDuration());
         /*seekBar.setVisibility(View.VISIBLE);*/
 
@@ -300,7 +320,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             seekBar.setProgress(player.getPosn());
 
             songTotalDuration=findViewById(R.id.songTotalDuration);
-            songCurrentDuration=(TextView)findViewById(R.id.songCurrentDuration);
+            songCurrentDuration= findViewById(R.id.songCurrentDuration);
             // Displaying Total Duration time
             // (целое число минут, общее время в сек - целое число минут выраженое в сек)
             songTotalDuration.setText(String.format("%d:%02d",(totalDuration / (1000*60)) % 60 , totalDuration/1000 - ((totalDuration / (1000*60)) % 60) *60)
@@ -318,10 +338,10 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }catch (Exception exc){exc.printStackTrace();}
     }
     private void initPlayMenu() {
-        LinearLayout playMenu = (LinearLayout) findViewById(R.id.play_menu_layout);
-        play = (ImageButton) findViewById(R.id.play);
-        previous = (ImageButton) findViewById(R.id.previous);
-        next = (ImageButton) findViewById(R.id.next);
+        LinearLayout playMenu = findViewById(R.id.play_menu_layout);
+        play = findViewById(R.id.play);
+        previous = findViewById(R.id.previous);
+        next = findViewById(R.id.next);
 
         previous.setOnClickListener(new View.OnClickListener() {
             @Override

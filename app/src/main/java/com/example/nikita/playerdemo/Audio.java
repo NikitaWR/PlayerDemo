@@ -2,7 +2,8 @@ package com.example.nikita.playerdemo;
 
 import java.io.Serializable;
 
-public class Audio implements Serializable {private String data;
+public class Audio implements Serializable {
+    private String data;
     private String title;
     private String album;
     private String artist;

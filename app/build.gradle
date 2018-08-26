@@ -27,7 +27,7 @@ dependencies {
     implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation group: 'com.android.support', name: 'support-media-compat', version: '27.1.1'
     implementation 'com.android.support:design:27.1.1'
-
+    implementation 'de.greenrobot:eventbus:2.4.0'
     implementation 'com.android.support:cardview-v7:27.1.1'
 
 

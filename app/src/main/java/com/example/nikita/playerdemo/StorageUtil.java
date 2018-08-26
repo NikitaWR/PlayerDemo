@@ -10,7 +10,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 //The following class handles Data storage.
 public class StorageUtil {
-    private final String STORAGE = " com.valdioveliu.valdio.audioplayer.STORAGE";
+    private final String STORAGE = "STORAGE";
     private SharedPreferences preferences;
     private Context context;
 

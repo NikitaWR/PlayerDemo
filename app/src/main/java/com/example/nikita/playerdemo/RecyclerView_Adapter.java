@@ -28,7 +28,6 @@ public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_layout, parent, false);
         ViewHolder holder = new ViewHolder(v);
         return holder;
-
     }
 
     @Override
@@ -53,11 +52,9 @@ public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
 class ViewHolder extends RecyclerView.ViewHolder {
 
     TextView title;
-    ImageView play_pause;
 
     ViewHolder(View itemView) {
         super(itemView);
-        title = (TextView) itemView.findViewById(R.id.title);
-       // play_pause = (ImageView) itemView.findViewById(R.id.play_pause);
+        title = itemView.findViewById(R.id.title);
     }
 }
