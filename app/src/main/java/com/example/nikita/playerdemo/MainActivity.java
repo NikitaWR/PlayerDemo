@@ -19,6 +19,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.EditText;
@@ -120,7 +121,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         } else {
             //Store the new audioIndex to SharedPreferences
+
             StorageUtil storage = new StorageUtil(getApplicationContext());
+            storage.storeAudio(audioList);
             storage.storeAudioIndex(audioIndex);
 
             //Service is active
@@ -182,6 +185,36 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.order_id_asc:
+                dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " ASC");
+                loadData();
+                initRecyclerView();
+                return true;
+
+            case R.id.order_id_desc:
+                dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " DESC");
+                loadData();
+                initRecyclerView();
+                return true;
+
+            case R.id.order_name_asc:
+                dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " ASC");
+                loadData();
+                initRecyclerView();
+                return true;
+            case R.id.order_name_desc:
+                dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST+ " DESC");
+                loadData();
+                initRecyclerView();
+
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     /**
@@ -312,7 +345,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     private void seekPosition() {
-        try{ //todo zrobić poludzku
+        try{ //todo bez try
             long totalDuration = getDuration();
             long currentDuration = getCurrentPosition();
 

@@ -340,10 +340,12 @@ public class LocalBinder extends Binder {
                 Log.i("PlaynewAudio","play");
 
                 //Get the new media index form SharedPreferences
+                audioList = new StorageUtil(getApplicationContext()).loadAudio();
                 audioIndex = new StorageUtil(getApplicationContext()).loadAudioIndex();
                 if (audioIndex != -1 && audioIndex < audioList.size()) {
                     //index is in a valid range
                     activeAudio = audioList.get(audioIndex);
+
                 } else {
                     stopSelf();
                 }
@@ -619,7 +621,7 @@ public class LocalBinder extends Binder {
             try {
                 initMediaSession();
                 initMediaPlayer();
-            } catch (RemoteException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 stopSelf();
             }

@@ -38,6 +38,7 @@ public class SQLAdapter {
     String TAG = "SQLadapter";
     private DatabaseHelper mDbHelper;
     private SQLiteDatabase mDb;
+    private String orderBy = null;
 
     public class DatabaseHelper extends SQLiteOpenHelper {
         private static final String SQL_DELETE_ENTRIES =
@@ -83,7 +84,7 @@ public class SQLAdapter {
     }
     public Cursor fetchAllClients() {
         Cursor mCursor = mDb.query(Audios.TABLE_NAME, new String[]{Audios._ID, COLUMN_NAME_DATA,
-                Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM}, null, null, null, null, null, null);
+                Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM}, null, null, null, null, orderBy, null);
         if (mCursor != null) {
             mCursor.moveToFirst();
         }
@@ -97,5 +98,9 @@ public class SQLAdapter {
         Log.w(TAG, Integer.toString(doneDelete));   // quantity of deleted rows
         return doneDelete > 0;
     }
+    public void setOrderBy(String txt) {
+        orderBy = txt;
+    }
+
 
 }

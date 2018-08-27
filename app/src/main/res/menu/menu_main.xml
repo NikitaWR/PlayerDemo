@@ -3,19 +3,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/order_id_asc"
-        android:title="sortuj"
+        android:title="Sort by title asc"
         app:showAsAction="never"/>
 
     <item android:id="@+id/order_id_desc"
-        android:title="sortuj"
+        android:title="sort by title desc"
         app:showAsAction="never" />
     <item
         android:id="@+id/order_name_asc"
-        android:title="sortuj"
+        android:title="sort by artist asc"
         app:showAsAction="never"/>
 
     <item android:id="@+id/order_name_desc"
-        android:title="sortuj"
+        android:title="sort by artist desc"
         app:showAsAction="never"/>
 
 
