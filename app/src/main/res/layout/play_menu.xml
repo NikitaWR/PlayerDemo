@@ -3,19 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/colorPrimaryMedium"
     android:orientation="vertical">
 
     <SeekBar
         android:id="@+id/seekBar3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:background="@color/colorPrimaryMedium"
+        android:layout_marginTop="18dp"
         android:visibility="visible"
         app:layout_constraintTop_toTopOf="parent" />
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/colorPrimaryMedium">
 
         <TextView
             android:id="@+id/songTotalDuration"
@@ -23,7 +26,8 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_marginRight="15dp"
-            android:text="00" />
+            android:text="00"
+            android:textStyle="normal" />
 
         <TextView
             android:id="@+id/songCurrentDuration"
@@ -38,6 +42,7 @@
         android:id="@+id/play_menu_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/colorPrimaryDark"
         android:layout_weight="1"
         android:orientation="horizontal">
 

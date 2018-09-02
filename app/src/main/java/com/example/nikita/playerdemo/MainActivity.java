@@ -1,49 +1,51 @@
 package com.example.nikita.playerdemo;
 
+import android.Manifest;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SimpleCursorAdapter;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.EditText;
-import android.widget.FilterQueryProvider;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.MediaController.MediaPlayerControl;
 import android.widget.TextView;
 import android.widget.Toast;
-import de.greenrobot.event.EventBus;
 
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
     private MediaPlayerService player;
     boolean serviceBound = false;
+    private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
     ArrayList<Audio> audioList;
-    ArrayList<Audio> audioSortedList;
     RecyclerView recyclerView;
+    TextView mTitleTextView;
     SeekBar seekBar;
+    ActionBar mActionBar;
     Runnable runnable;
     Handler handler;
     ImageButton play;
@@ -52,9 +54,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     TextView songCurrentDuration;
     TextView songTotalDuration;
     SQLAdapter dbHelper;
-    private SimpleCursorAdapter dataAdapter;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,9 +61,24 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        checkPermissions();
+
+        mActionBar = getSupportActionBar();
+        mActionBar.setDisplayShowTitleEnabled(false);
+        LayoutInflater mInflater = LayoutInflater.from(this);
+        View mCustomView = mInflater.inflate(R.layout.title_view, null);
+        mTitleTextView = mCustomView.findViewById(R.id.title);
+        mActionBar.setCustomView(mCustomView);
+        mActionBar.setDisplayShowCustomEnabled(true);
+        mActionBar.hide();
+
+
         recyclerView = findViewById(R.id.recyclerview);
-        Piotrek.mainActivity=this;
-        loadAudio();
+        Piotrek.mainActivity = this;
+    }
+
+    void setActionBarText(String myText) {
+        mTitleTextView.setText(myText);
     }
 
     private void initRecyclerView() {
@@ -80,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             }));
         }
     }
+
     //Binding this Client to the AudioPlayer Service
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -88,8 +103,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) service;
             player = binder.getService();
             serviceBound = true;
-
-            //Toast.makeText(MainActivity.this, "Service Bound", Toast.LENGTH_SHORT).show();
 
             initSeekBar();
             initPlayMenu();
@@ -109,6 +122,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
     private void playAudio(int audioIndex) {
         //Check is service is active
+        if (!mActionBar.isShowing())
+            mActionBar.show();
 
         if (!serviceBound) {
             //Store Serializable audioList to SharedPreferences
@@ -133,7 +148,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
     }
 
-
     //retrieves the data from the device in ascending order
     private void loadAudio() {
         ContentResolver contentResolver = getContentResolver();
@@ -150,34 +164,36 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                 String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
-                dbHelper.createAudio(data,title,album,artist);
+                dbHelper.createAudio(data, title, album, artist);
             }
-            loadData();
+
         }
         cursor.close();
     }
-    //writes data to DB
-      void creatDB(){
-         dbHelper = new SQLAdapter(this);
-         dbHelper.open();
-         dbHelper.deleteAllAudios();
-          }
 
-     //load audio from db
-      void loadData() {
-          audioList = new ArrayList<>();
-         Cursor cursor = dbHelper.fetchAllClients();
-         while (cursor.moveToNext()) {
-             Audio audio = new Audio((cursor.getString(
-                     cursor.getColumnIndex("data"))),
-                     cursor.getString(cursor.getColumnIndex("title")),
-                     cursor.getString(cursor.getColumnIndex("album")),
-                     cursor.getString(cursor.getColumnIndex("artist"))
-                     );
-                 audioList.add(audio);
-             }
-          initRecyclerView();
-     }
+    //writes data to DB
+    void creatDB() {
+        dbHelper = new SQLAdapter(this);
+        dbHelper.open();
+    }
+
+    //load audio from db
+    void loadData() {
+        audioList = new ArrayList<>();
+        Cursor cursor = dbHelper.fetchAllClients();
+        while (cursor.moveToNext()) {
+            Audio audio = new Audio((cursor.getString(
+                    cursor.getColumnIndex("data"))),
+                    cursor.getString(cursor.getColumnIndex("title")),
+                    cursor.getString(cursor.getColumnIndex("album")),
+                    cursor.getString(cursor.getColumnIndex("artist"))
+            );
+            audioList.add(audio);
+        }
+        initRecyclerView();
+        cursor.close();
+    }
+
     /**
      * menu
      */
@@ -186,6 +202,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -207,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 initRecyclerView();
                 return true;
             case R.id.order_name_desc:
-                dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST+ " DESC");
+                dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " DESC");
                 loadData();
                 initRecyclerView();
 
@@ -240,8 +257,10 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             unbindService(serviceConnection);
             //service is active
             player.stopSelf();
+            dbHelper.deleteAllAudios();
 
         }
+
     }
 
     /**
@@ -270,7 +289,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public int getCurrentPosition() {
-        if (seekBar!=null) {
+        if (seekBar != null) {
             return player.getPosn();
         } else
             return 0;
@@ -345,21 +364,21 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     private void seekPosition() {
-        try{ //todo bez try
+        try { //todo bez try
             long totalDuration = getDuration();
             long currentDuration = getCurrentPosition();
 
 
             seekBar.setProgress(player.getPosn());
 
-            songTotalDuration=findViewById(R.id.songTotalDuration);
-            songCurrentDuration= findViewById(R.id.songCurrentDuration);
+            songTotalDuration = findViewById(R.id.songTotalDuration);
+            songCurrentDuration = findViewById(R.id.songCurrentDuration);
             // Displaying Total Duration time
             // (целое число минут, общее время в сек - целое число минут выраженое в сек)
-            songTotalDuration.setText(String.format("%d:%02d",(totalDuration / (1000*60)) % 60 , totalDuration/1000 - ((totalDuration / (1000*60)) % 60) *60)
+            songTotalDuration.setText(String.format("%d:%02d", (totalDuration / (1000 * 60)) % 60, totalDuration / 1000 - ((totalDuration / (1000 * 60)) % 60) * 60)
             );
-             //Displaying time completed playing
-            songCurrentDuration.setText(String.format("%d:%02d",(currentDuration / (1000*60)) % 60 , currentDuration/1000 - ((currentDuration / (1000*60)) % 60) *60)
+            //Displaying time completed playing
+            songCurrentDuration.setText(String.format("%d:%02d", (currentDuration / (1000 * 60)) % 60, currentDuration / 1000 - ((currentDuration / (1000 * 60)) % 60) * 60)
             );
             runnable = new Runnable() {
                 @Override
@@ -368,8 +387,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 }
             };
             handler.postDelayed(runnable, 1000);
-        }catch (Exception exc){exc.printStackTrace();}
+        } catch (Exception exc) {
+            exc.printStackTrace();
+        }
     }
+
     private void initPlayMenu() {
         LinearLayout playMenu = findViewById(R.id.play_menu_layout);
         play = findViewById(R.id.play);
@@ -391,17 +413,18 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (player.isPng()){
+                if (player.isPng()) {
                     pause();
                 }
                 if (!player.isPng()) {
-                start();
+                    start();
                 }
             }
 
         });
     }
-    public void buildNotification(PlaybackStatus playbackStatus){
+
+    public void buildNotification(PlaybackStatus playbackStatus) {
         if (serviceBound) {
             if (playbackStatus == PlaybackStatus.PLAYING) {
                 play.setImageResource(R.drawable.ic_action_pause);
@@ -409,6 +432,44 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             } else if (playbackStatus == PlaybackStatus.PAUSED) {
                 play.setImageResource(R.drawable.ic_action_play);
             }
+        }
+    }
+
+    private void checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
+
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case MY_PERMISSIONS_READ_EXTERNAL_STORAGE: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // access granted
+                    loadAudio();
+                    loadData();
+                } else {
+                    // access denied
+                    closeNow();
+                }
+                return;
+            }
+        }
+    }
+
+    private void closeNow() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            finishAffinity();
+        } else {
+            finish();
         }
     }
 }

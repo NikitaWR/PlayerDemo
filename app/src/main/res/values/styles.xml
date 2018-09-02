@@ -6,8 +6,21 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:actionOverflowButtonStyle">@style/AppTheme.OverFlow</item>
 
+        <!--<item name="actionBarStyle">@style/Widget.Styled.ActionBar</item>
+        <item name="android:actionBarStyle">@style/Widget.Styled.ActionBar</item>-->
     </style>
+    <style name="AppTheme.OverFlow">
+        <item name="android:src">@drawable/ic_action_menu</item>
+    </style>
+
+   <!-- <style name="Widget.Styled.ActionBar" parent="Widget.AppCompat.ActionBar">
+        <item name="android:displayOptions">showHome|useLogo</item>
+        <item name="displayOptions">showHome|useLogo</item>
+    </style>-->
+
+
     <style name="AppTheme.Launcher">
     <item name="android:windowBackground">@drawable/launch_screen</item>
     </style>

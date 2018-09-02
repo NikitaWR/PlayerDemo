@@ -4,7 +4,7 @@
     android:id="@+id/cardview"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="6dp"
+    android:layout_marginTop="1dp"
     android:elevation="100dp"
     android:orientation="horizontal">
 

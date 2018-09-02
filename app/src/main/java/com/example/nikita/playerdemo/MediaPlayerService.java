@@ -24,6 +24,7 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.MediaController;
 import android.widget.Toast;
 
 
@@ -52,6 +53,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
     private ArrayList<Audio> audioList;
     private int audioIndex = -1;
     private Audio activeAudio; //an object of the currently playing audio
+    private boolean userActionStop = false;//check for audio focus
 
 
 // Binder given to clients
@@ -82,10 +84,6 @@ private final IBinder iBinder = new LocalBinder();
         registerBecomingNoisyReceiver();
         //Listen for new Audio to play -- BroadcastReceiver
         register_playNewAudio();
-       /* register_pauseAudio();*/
-
-
-
     }
     @Override
     public void onDestroy() {
@@ -160,8 +158,8 @@ public boolean onInfo(MediaPlayer mp, int what, int extra) {
     @Override
     public void onPrepared(MediaPlayer mp) {
         //Invoked when the media source is ready for playback.
-        Log.i("onPrepared", "playmedia");
-        playMedia();
+            Log.i("onPrepared", "playmedia");
+            playMedia();
 
     }
 @Override
@@ -172,29 +170,37 @@ public void onSeekComplete(MediaPlayer mp) {
     @Override
     public void onAudioFocusChange(int focusState) {
         //Invoked when the audio focus of the system is updated.
+
         switch (focusState) {
             case AudioManager.AUDIOFOCUS_GAIN:
                 // resume playback
-                if (mediaPlayer == null) initMediaPlayer();
-                else if (!mediaPlayer.isPlaying()) mediaPlayer.start();
-                mediaPlayer.setVolume(1.0f, 1.0f);
+                if (userActionStop) {
+                    if (mediaPlayer == null){ initMediaPlayer();}
+                    else if (!mediaPlayer.isPlaying()){ mediaPlayer.start();
+                        mediaPlayer.setVolume(1.0f, 1.0f);}
+                    userActionStop = true;
+                }
                 break;
             case AudioManager.AUDIOFOCUS_LOSS:
                 // Lost focus for an unbounded amount of time: stop playback and release media player
                 if (mediaPlayer.isPlaying()) mediaPlayer.stop();
                 mediaPlayer.release();
                 mediaPlayer = null;
+                userActionStop=false;
                 break;
+
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                 // Lost focus for a short time, but we have to stop
                 // playback. We don't release the media player because playback
                 // is likely to resume
                 if (mediaPlayer.isPlaying()) mediaPlayer.pause();
+                userActionStop=false;
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                 // Lost focus for a short time, but it's ok to keep playing
                 // at an attenuated level
                 if (mediaPlayer.isPlaying()) mediaPlayer.setVolume(0.1f, 0.1f);
+                userActionStop=false;
                 break;
         }
     }
@@ -255,20 +261,18 @@ public class LocalBinder extends Binder {
     }
 
     private void pauseMedia() {
-
-        if (mediaPlayer.isPlaying()) {
-           // Toast.makeText(getApplicationContext(),"pause media",Toast.LENGTH_SHORT).show();
+        if (mediaPlayer!=null){
+         if (mediaPlayer.isPlaying()) {
+            // Toast.makeText(getApplicationContext(),"pause media",Toast.LENGTH_SHORT).show();
             mediaPlayer.pause();
-            resumePosition = mediaPlayer.getCurrentPosition();
-
-
+          //  resumePosition = mediaPlayer.getCurrentPosition();
+         }
         }
     }
 
     private void resumeMedia() {
 
         if (!mediaPlayer.isPlaying()) {
-           // Toast.makeText(getApplicationContext(),"resume media",Toast.LENGTH_SHORT).show();
             mediaPlayer.seekTo(resumePosition);
             mediaPlayer.start();
         }
@@ -405,7 +409,6 @@ public class LocalBinder extends Binder {
             public void onPause() {
                 Log.i("onPause","pause media");
                 super.onPause();
-
                 pauseMedia();
                 buildNotification(PlaybackStatus.PAUSED);
             }
@@ -450,6 +453,9 @@ public class LocalBinder extends Binder {
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, activeAudio.getAlbum())
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, activeAudio.getTitle())
                 .build());
+
+        String text = activeAudio.getArtist() + " : " + activeAudio.getTitle();
+        Piotrek.mainActivity.setActionBarText(text);
     }
     private void skipToNext() {
 
@@ -496,7 +502,6 @@ public class LocalBinder extends Binder {
         int notificationAction = android.R.drawable.ic_media_pause;//needs to be initialized
         PendingIntent play_pauseAction = null;
 
-        Piotrek piotrek = new Piotrek();
         Piotrek.mainActivity.buildNotification(playbackStatus);
 
         //Build a new notification according to the current state of the MediaPlayer
@@ -652,6 +657,7 @@ public class LocalBinder extends Binder {
 
     public void seek(int posn){
         mediaPlayer.seekTo(posn);
+        resumePosition = posn;
     }
     public boolean isPlaying(){
         return mediaPlayer.isPlaying();
