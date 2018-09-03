@@ -2,6 +2,7 @@
     <string name="app_name">PlayerDemo</string>
 
     <string name="action_settings">Settings</string>
-    <string name="access_denied">access_denied</string>
+    <string name="access_denied">access denied</string>
+    <string name="loading_data">loading data</string>
 
 </resources>

@@ -48,12 +48,12 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
     private boolean ongoingCall = false;
     private PhoneStateListener phoneStateListener;
     private TelephonyManager telephonyManager;
+    private boolean pausedByUser = false;
 
     //List of available Audio files
     private ArrayList<Audio> audioList;
     private int audioIndex = -1;
     private Audio activeAudio; //an object of the currently playing audio
-    private boolean userActionStop = false;//check for audio focus
 
 
 // Binder given to clients
@@ -174,33 +174,39 @@ public void onSeekComplete(MediaPlayer mp) {
         switch (focusState) {
             case AudioManager.AUDIOFOCUS_GAIN:
                 // resume playback
-                if (userActionStop) {
-                    if (mediaPlayer == null){ initMediaPlayer();}
-                    else if (!mediaPlayer.isPlaying()){ mediaPlayer.start();
-                        mediaPlayer.setVolume(1.0f, 1.0f);}
-                    userActionStop = true;
+                if (!pausedByUser) {
+                    Log.i("AUDIOFOCUS_GAIN", "pausedByUser: " + String.valueOf(pausedByUser));
+                    if (mediaPlayer == null) {
+                        initMediaPlayer();
+                    } else if (!mediaPlayer.isPlaying()) {
+                        resumeMedia();
+                        // mediaPlayer.setVolume(1.0f, 1.0f);
+                    }
                 }
                 break;
             case AudioManager.AUDIOFOCUS_LOSS:
                 // Lost focus for an unbounded amount of time: stop playback and release media player
-                if (mediaPlayer.isPlaying()) mediaPlayer.stop();
-                mediaPlayer.release();
-                mediaPlayer = null;
-                userActionStop=false;
+                //if (mediaPlayer.isPlaying()) mediaPlayer.stop();
+               // stopMedia();
+                //mediaPlayer.release();
+                //mediaPlayer = null;
+                pauseMedia();
+                Log.i("onAudioFocusChange", "AUDIOFOCUS_LOSS");
                 break;
+
 
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                 // Lost focus for a short time, but we have to stop
                 // playback. We don't release the media player because playback
                 // is likely to resume
                 if (mediaPlayer.isPlaying()) mediaPlayer.pause();
-                userActionStop=false;
+                Log.i("onAudioFocusChange", "AUDIOFOCUS_LOSS_TRANSIENT");
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                 // Lost focus for a short time, but it's ok to keep playing
                 // at an attenuated level
                 if (mediaPlayer.isPlaying()) mediaPlayer.setVolume(0.1f, 0.1f);
-                userActionStop=false;
+                Log.i("onAudioFocusChange", "AUDIOFOCUS_LOSS_CAN_DUCK");
                 break;
         }
     }
@@ -263,9 +269,9 @@ public class LocalBinder extends Binder {
     private void pauseMedia() {
         if (mediaPlayer!=null){
          if (mediaPlayer.isPlaying()) {
-            // Toast.makeText(getApplicationContext(),"pause media",Toast.LENGTH_SHORT).show();
+            Log.i("pauseMedia", "pause");
             mediaPlayer.pause();
-          //  resumePosition = mediaPlayer.getCurrentPosition();
+            resumePosition = mediaPlayer.getCurrentPosition();
          }
         }
     }
@@ -563,6 +569,7 @@ public class LocalBinder extends Binder {
                 // Play
                 playbackAction.setAction(ACTION_PLAY);
                 return PendingIntent.getService(this, actionNumber, playbackAction, 0);
+
             case 1:
                 // Pause
                 playbackAction.setAction(ACTION_PAUSE);
@@ -585,8 +592,10 @@ public class LocalBinder extends Binder {
 
         String actionString = playbackAction.getAction();
         if (actionString.equalsIgnoreCase(ACTION_PLAY)) {
+            pausedByUser = false;
             transportControls.play();
         } else if (actionString.equalsIgnoreCase(ACTION_PAUSE)) {
+            pausedByUser = true;
             transportControls.pause();
         } else if (actionString.equalsIgnoreCase(ACTION_NEXT)) {
             transportControls.skipToNext();
@@ -672,5 +681,9 @@ public class LocalBinder extends Binder {
     //skip to next
     public void playNext(){
         transportControls.skipToNext();
+    }
+    public void pausedByUser(boolean mess){
+       pausedByUser = mess ;
+
     }
 }

@@ -29,6 +29,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.MediaController.MediaPlayerControl;
 import android.widget.TextView;
@@ -51,18 +52,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     ImageButton play;
     ImageButton previous;
     ImageButton next;
+    ProgressBar progressBar;
+    TextView loadingData;
     TextView songCurrentDuration;
     TextView songTotalDuration;
     SQLAdapter dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        checkPermissions();
-
         mActionBar = getSupportActionBar();
         mActionBar.setDisplayShowTitleEnabled(false);
         LayoutInflater mInflater = LayoutInflater.from(this);
@@ -71,9 +73,12 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         mActionBar.setCustomView(mCustomView);
         mActionBar.setDisplayShowCustomEnabled(true);
         mActionBar.hide();
-
-
+        progressBar = findViewById(R.id.progressBar);
+        progressBar.setVisibility(View.VISIBLE);
+        loadingData = findViewById(R.id.loadingData);
         recyclerView = findViewById(R.id.recyclerview);
+        loadingData.setVisibility(View.VISIBLE);
+        loadAudio();
         Piotrek.mainActivity = this;
     }
 
@@ -83,6 +88,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
     private void initRecyclerView() {
         if (audioList.size() > 0) {
+            progressBar.setVisibility(View.INVISIBLE);
+            loadingData.setVisibility(View.INVISIBLE);
             RecyclerView_Adapter adapter = new RecyclerView_Adapter(audioList, getApplication());
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -149,7 +156,17 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     //retrieves the data from the device in ascending order
-    private void loadAudio() {
+    private boolean loadAudio() {
+       // checkPermissions();
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
+           return false;
+        }
         ContentResolver contentResolver = getContentResolver();
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
@@ -169,6 +186,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
         }
         cursor.close();
+        loadData();
+        return true;
     }
 
     //writes data to DB
@@ -299,8 +318,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     public void seekTo(int pos) {
         if (serviceBound)
             player.seek(pos);
-
-
     }
 
     @Override
@@ -386,7 +403,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     seekPosition();
                 }
             };
-            handler.postDelayed(runnable, 1000);
+            handler.postDelayed(runnable, 200);
         } catch (Exception exc) {
             exc.printStackTrace();
         }
@@ -415,8 +432,10 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             public void onClick(View v) {
                 if (player.isPng()) {
                     pause();
+                    player.pausedByUser(true);
                 }
                 if (!player.isPng()) {
+                    player.pausedByUser(false);
                     start();
                 }
             }
@@ -435,18 +454,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
     }
 
-    private void checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
-
-        }
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -455,7 +462,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // access granted
                     loadAudio();
-                    loadData();
                 } else {
                     // access denied
                     closeNow();
@@ -472,4 +478,5 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             finish();
         }
     }
+
 }
