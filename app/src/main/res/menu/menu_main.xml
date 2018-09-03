@@ -2,20 +2,25 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/search_menu"
+        android:title="@string/search"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/order_id_asc"
-        android:title="Sort by title asc"
+        android:title="@string/sort_by_title_asc"
         app:showAsAction="never"/>
 
     <item android:id="@+id/order_id_desc"
-        android:title="sort by title desc"
+        android:title="@string/sort_by_title_desc"
         app:showAsAction="never" />
     <item
         android:id="@+id/order_name_asc"
-        android:title="sort by artist asc"
+        android:title="@string/sort_by_artist_asc"
         app:showAsAction="never"/>
 
     <item android:id="@+id/order_name_desc"
-        android:title="sort by artist desc"
+        android:title="@string/sort_by_artist_desc"
         app:showAsAction="never"/>
 
 

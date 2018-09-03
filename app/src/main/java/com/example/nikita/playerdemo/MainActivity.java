@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
@@ -19,6 +20,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.ActionBar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -27,6 +29,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -199,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     //load audio from db
     void loadData() {
         audioList = new ArrayList<>();
-        Cursor cursor = dbHelper.fetchAllClients();
+        Cursor cursor = dbHelper.fetchAllAudios();
         while (cursor.moveToNext()) {
             Audio audio = new Audio((cursor.getString(
                     cursor.getColumnIndex("data"))),
@@ -211,6 +214,22 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
         initRecyclerView();
         cursor.close();
+    }
+    void fetchByArtistAndTitle(String search){
+        audioList.clear();
+        Cursor cursor = dbHelper.fetchAudiosByTitleAndArtist(search);
+        while (cursor.moveToNext()) {
+            Audio audio = new Audio((cursor.getString(
+                    cursor.getColumnIndex("data"))),
+                    cursor.getString(cursor.getColumnIndex("title")),
+                    cursor.getString(cursor.getColumnIndex("album")),
+                    cursor.getString(cursor.getColumnIndex("artist"))
+            );
+            audioList.add(audio);
+        }
+        initRecyclerView();
+        cursor.close();
+        mActionBar.setDisplayHomeAsUpEnabled(true);
     }
 
     /**
@@ -225,6 +244,36 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.search_menu:
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle(R.string.search);
+
+                View viewInflated = LayoutInflater.from(this).inflate(R.layout.search_window, null);
+
+                final EditText bodyInput = viewInflated.findViewById(R.id.searchWindow);
+                // Ustawiamy widok do buildera
+                builder.setView(viewInflated);
+
+                // Callback'i dla przycisków
+                builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                                String body = bodyInput.getText().toString();
+                                fetchByArtistAndTitle(body);
+
+                            }
+                });
+                builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+
+                builder.show();
+                return true;
+
             case R.id.order_id_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " ASC");
                 loadData();

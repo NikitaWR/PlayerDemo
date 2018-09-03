@@ -82,9 +82,31 @@ public class SQLAdapter {
 
         return mDb.insert(TABLE_NAME, null, initialValues);
     }
-    public Cursor fetchAllClients() {
+    public Cursor fetchAllAudios() {
         Cursor mCursor = mDb.query(Audios.TABLE_NAME, new String[]{Audios._ID, COLUMN_NAME_DATA,
                 Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM}, null, null, null, null, orderBy, null);
+        if (mCursor != null) {
+            mCursor.moveToFirst();
+        }
+
+        return mCursor;
+    }
+    public Cursor fetchAudiosByTitleAndArtist(String inputText) throws SQLException {
+        Log.w(TAG, "Szukamy: " + inputText);
+
+        Cursor mCursor = null;
+
+        if (inputText == null || inputText.length () == 0) {
+            mCursor = mDb.query(Audios.TABLE_NAME, new String[]{Audios._ID, COLUMN_NAME_DATA,
+                    Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM}, null, null, null, null, orderBy, null);
+
+        }
+        mCursor = mDb.query(Audios.TABLE_NAME, new String[]{Audios._ID, COLUMN_NAME_DATA,
+                        Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM},Audios.COLUMN_NAME_ARTIST + " like '%" + inputText + "%'" + " OR " +
+                        Audios.COLUMN_NAME_TITLE+ " like '%" + inputText + "%'",
+                null, null, null, orderBy, null);
+
+
         if (mCursor != null) {
             mCursor.moveToFirst();
         }

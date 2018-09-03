@@ -4,5 +4,10 @@
     <string name="action_settings">Settings</string>
     <string name="access_denied">access denied</string>
     <string name="loading_data">loading data</string>
+    <string name="search">Search</string>
+    <string name="sort_by_title_asc">Sort by title ascending</string>
+    <string name="sort_by_artist_asc">Sort by artist ascending</string>
+    <string name="sort_by_title_desc">Sort by title descending</string>
+    <string name="sort_by_artist_desc">Sort by artist descending</string>
 
 </resources>
