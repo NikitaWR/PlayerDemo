@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -14,6 +15,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -25,6 +27,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,15 +47,17 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
     private MediaPlayerService player;
     boolean serviceBound = false;
+    boolean letUseKeyBack = false;
     private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
-    ArrayList<Audio> audioList;
-    RecyclerView recyclerView;
-    TextView mTitleTextView;
-    SeekBar seekBar;
-    ActionBar mActionBar;
-    Runnable runnable;
-    Handler handler;
+    private String actionBarText;
+    private ArrayList<Audio> audioList;
+    private RecyclerView recyclerView;
+    private TextView mTitleTextView;
+    private SeekBar seekBar;
+    private ActionBar mActionBar;
+    private Runnable runnable;
+    private Handler handler;
     ImageButton play;
     ImageButton previous;
     ImageButton next;
@@ -81,15 +87,44 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         loadingData = findViewById(R.id.loadingData);
         recyclerView = findViewById(R.id.recyclerview);
         loadingData.setVisibility(View.VISIBLE);
-        loadAudio();
+
+       // checkPermissions();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
+            //return false;
+        }else {
+            //check if first time than load data from device to DB
+            if (!prefs.getBoolean("firstTime", false)) {
+                Log.i("OnCreate", "first time!");
+                Log.i("OnCreate", String.valueOf(prefs.getBoolean("firstTime", true)));
+                loadAudio();//load to DB
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean("firstTime", true);
+                editor.apply();
+            } else Log.i("OnCreate", "not first time");
+           // if (!loadAudio()) creatAlertDialog();
+            //else {
+            //load from DB
+            initDB();
+            loadData();
+           // }
+        }
         Piotrek.mainActivity = this;
     }
 
     void setActionBarText(String myText) {
+        actionBarText=myText;
         mTitleTextView.setText(myText);
     }
 
-    private void initRecyclerView() {
+    private void initRecyclerView(final ArrayList audioList) {
+
         if (audioList.size() > 0) {
             progressBar.setVisibility(View.INVISIBLE);
             loadingData.setVisibility(View.INVISIBLE);
@@ -99,10 +134,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             recyclerView.addOnItemTouchListener(new CustomTouchListener(this, new onItemClickListener() {
                 @Override
                 public void onClick(View view, int index) {
-                    playAudio(index);
+                    playAudio(index, audioList);
                 }
             }));
         }
+        else Toast.makeText(this,getResources().getString(R.string.nothing_found),Toast.LENGTH_SHORT).show();
     }
 
     //Binding this Client to the AudioPlayer Service
@@ -130,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
     };
 
-    private void playAudio(int audioIndex) {
+    private void playAudio(int audioIndex, ArrayList audioList) {
         //Check is service is active
         if (!mActionBar.isShowing())
             mActionBar.show();
@@ -159,17 +195,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     //retrieves the data from the device in ascending order
-    private boolean loadAudio() {
-       // checkPermissions();
-        if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
+    private boolean  loadAudio() {
 
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
-           return false;
-        }
+        Log.i("load audio", "la");
         ContentResolver contentResolver = getContentResolver();
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
@@ -178,58 +206,71 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         Cursor cursor = contentResolver.query(uri, null, selection, null, sortOrder);
 
         if (cursor != null && cursor.getCount() > 0) {
-            creatDB();
+            initDB();
+            int size = 0;
             while (cursor.moveToNext()) {
                 String data = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
                 String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                 String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
                 dbHelper.createAudio(data, title, album, artist);
+                size++;
             }
+            Log.i("load audio list size", String.valueOf(size));
 
-        }
-        cursor.close();
-        loadData();
-        return true;
+
+            cursor.close();
+            return true;
+
+        } else {
+            creatAlertDialog();
+            return false;}
     }
 
-    //writes data to DB
-    void creatDB() {
+    private void initDB() {
         dbHelper = new SQLAdapter(this);
         dbHelper.open();
     }
 
-    //load audio from db
+    //load audio from db to array
     void loadData() {
         audioList = new ArrayList<>();
-        Cursor cursor = dbHelper.fetchAllAudios();
-        while (cursor.moveToNext()) {
-            Audio audio = new Audio((cursor.getString(
-                    cursor.getColumnIndex("data"))),
+        Cursor cursor
+                = dbHelper.fetchAllAudios();
+        int size = 0;
+        if (cursor.getCount()>0){
+
+        cursor.moveToFirst();
+         do {
+            Audio audio = new Audio(cursor.getString(
+                    cursor.getColumnIndex("data")),
                     cursor.getString(cursor.getColumnIndex("title")),
                     cursor.getString(cursor.getColumnIndex("album")),
-                    cursor.getString(cursor.getColumnIndex("artist"))
-            );
+                    cursor.getString(cursor.getColumnIndex("artist")));
             audioList.add(audio);
-        }
-        initRecyclerView();
+            size++;
+        }while (cursor.moveToNext());
+        initRecyclerView(audioList);
+        Log.i("load data list size", String.valueOf(size));
         cursor.close();
+        }
+        else creatAlertDialog();
     }
     void fetchByArtistAndTitle(String search){
-        audioList.clear();
+        ArrayList audioListSearch = new ArrayList();
         Cursor cursor = dbHelper.fetchAudiosByTitleAndArtist(search);
         while (cursor.moveToNext()) {
             Audio audio = new Audio((cursor.getString(
                     cursor.getColumnIndex("data"))),
                     cursor.getString(cursor.getColumnIndex("title")),
                     cursor.getString(cursor.getColumnIndex("album")),
-                    cursor.getString(cursor.getColumnIndex("artist"))
-            );
-            audioList.add(audio);
+                    cursor.getString(cursor.getColumnIndex("artist")));
+            audioListSearch.add(audio);
         }
-        initRecyclerView();
+        if (audioListSearch.size()>0)
+        mTitleTextView.setText((getResources().getString(R.string.search) +" " + "\"" +  search + "\""));
+        initRecyclerView(audioListSearch);
         cursor.close();
-        mActionBar.setDisplayHomeAsUpEnabled(true);
     }
 
     /**
@@ -244,6 +285,12 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.home:
+                // go back to audioList intstead of audioListSearch
+                initRecyclerView(audioList);
+                //hide up button
+                mActionBar.setDisplayHomeAsUpEnabled(false);
+                return true;
             case R.id.search_menu:
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
                 builder.setTitle(R.string.search);
@@ -251,17 +298,20 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 View viewInflated = LayoutInflater.from(this).inflate(R.layout.search_window, null);
 
                 final EditText bodyInput = viewInflated.findViewById(R.id.searchWindow);
-                // Ustawiamy widok do buildera
                 builder.setView(viewInflated);
 
-                // Callback'i dla przycisków
+
                 builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 dialog.dismiss();
                                 String body = bodyInput.getText().toString();
                                 fetchByArtistAndTitle(body);
+                                letUseKeyBack=true;
 
+                                //show up button
+                                /*mActionBar.setDisplayHomeAsUpEnabled(true);
+                                mActionBar.setHomeButtonEnabled(true);*/
                             }
                 });
                 builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
@@ -277,29 +327,45 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             case R.id.order_id_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " ASC");
                 loadData();
-                initRecyclerView();
+                initRecyclerView(audioList);
                 return true;
 
             case R.id.order_id_desc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " DESC");
                 loadData();
-                initRecyclerView();
+                initRecyclerView(audioList);
                 return true;
 
             case R.id.order_name_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " ASC");
                 loadData();
-                initRecyclerView();
+                initRecyclerView(audioList);
                 return true;
             case R.id.order_name_desc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " DESC");
                 loadData();
-                initRecyclerView();
+                initRecyclerView(audioList);
 
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_BACK)&& letUseKeyBack)
+        {
+            // go back to audioList intstead of audioListSearch
+            initRecyclerView(audioList);
+            //hide up button
+            //mActionBar.setDisplayHomeAsUpEnabled(false);
+            letUseKeyBack=false;
+            setActionBarText(actionBarText);
+
+            return true;
+        }
+        //default
+        return super.onKeyDown(keyCode, event);
     }
 
     /**
@@ -325,7 +391,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             unbindService(serviceConnection);
             //service is active
             player.stopSelf();
-            dbHelper.deleteAllAudios();
+           // dbHelper.close();
 
         }
 
@@ -337,19 +403,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public void start() {
-        if (serviceBound)
+        if (serviceBound && player!=null)
             player.go();
     }
 
 
     public void pause() {
-        if (serviceBound)
+        if (serviceBound && player!=null)
             player.pausePlayer();
     }
 
 
     public int getDuration() {
-        if (serviceBound) {
+        if (serviceBound && seekBar != null && player!=null) {
             return player.getDur();
         } else
             return 0;
@@ -357,7 +423,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public int getCurrentPosition() {
-        if (seekBar != null) {
+        if (seekBar != null && serviceBound && player!=null) {
             return player.getPosn();
         } else
             return 0;
@@ -365,7 +431,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public void seekTo(int pos) {
-        if (serviceBound)
+        Log.d("seekTo", String.valueOf(pos));
+        if (seekBar != null && serviceBound)
             player.seek(pos);
     }
 
@@ -406,6 +473,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     private void initSeekBar() {
 
         seekBar = findViewById(R.id.seekBar3);
+        Log.d("setMax", String.valueOf(getDuration()));
         seekBar.setMax(getDuration());
         /*seekBar.setVisibility(View.VISIBLE);*/
 
@@ -413,6 +481,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
                 if (input) {
+                    Log.d("onProgressChanged", "progress "+String.valueOf(progress)+ "   duration " + getDuration());
                     player.seek(progress);
                 }
             }
@@ -430,9 +499,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     private void seekPosition() {
-        try { //todo bez try
+
+       // try {
             long totalDuration = getDuration();
             long currentDuration = getCurrentPosition();
+
 
 
             seekBar.setProgress(player.getPosn());
@@ -453,9 +524,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 }
             };
             handler.postDelayed(runnable, 200);
-        } catch (Exception exc) {
-            exc.printStackTrace();
-        }
+       // }
+       // catch (Exception e){e.printStackTrace();}
+
     }
 
     private void initPlayMenu() {
@@ -484,8 +555,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     player.pausedByUser(true);
                 }
                 if (!player.isPng()) {
-                    player.pausedByUser(false);
                     start();
+                    player.pausedByUser(false);
                 }
             }
 
@@ -510,7 +581,21 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             case MY_PERMISSIONS_READ_EXTERNAL_STORAGE: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // access granted
-                    loadAudio();
+                    //but gotta check however was it first start
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                    if(!prefs.getBoolean("firstTime", false)) {
+                        SharedPreferences.Editor editor = prefs.edit();
+                        Log.i("OnPermissionResult", "first time!");
+                        editor.putBoolean("firstTime", true);
+                        editor.apply();
+                        loadAudio();//load to DB
+                    }
+                   // if (!loadAudio())creatAlertDialog();
+                    //else {
+                        initDB();
+                        loadData();
+                   // }
+
                 } else {
                     // access denied
                     closeNow();
@@ -526,6 +611,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         } else {
             finish();
         }
+    }
+    private void creatAlertDialog(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("No audio found");
+
+
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                closeNow();
+            }
+        });
+        builder.show();
     }
 
 }

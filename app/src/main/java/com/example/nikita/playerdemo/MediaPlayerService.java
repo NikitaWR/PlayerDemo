@@ -49,6 +49,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
     private PhoneStateListener phoneStateListener;
     private TelephonyManager telephonyManager;
     private boolean pausedByUser = false;
+    boolean released = false;
 
     //List of available Audio files
     private ArrayList<Audio> audioList;
@@ -71,6 +72,8 @@ private final IBinder iBinder = new LocalBinder();
 
     //AudioPlayer notification ID
     private static final int NOTIFICATION_ID = 101;
+    private boolean mpIsPrepared = false;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -84,6 +87,7 @@ private final IBinder iBinder = new LocalBinder();
         registerBecomingNoisyReceiver();
         //Listen for new Audio to play -- BroadcastReceiver
         register_playNewAudio();
+        released = false;
     }
     @Override
     public void onDestroy() {
@@ -91,6 +95,7 @@ private final IBinder iBinder = new LocalBinder();
         if (mediaPlayer != null) {
             stopMedia();
             mediaPlayer.release();
+            released = true;
         }
         removeAudioFocus();
         //Disable the PhoneStateListener
@@ -158,6 +163,7 @@ public boolean onInfo(MediaPlayer mp, int what, int extra) {
     @Override
     public void onPrepared(MediaPlayer mp) {
         //Invoked when the media source is ready for playback.
+            mpIsPrepared = true;
             Log.i("onPrepared", "playmedia");
             playMedia();
 
@@ -330,6 +336,8 @@ public class LocalBinder extends Binder {
                         if (mediaPlayer != null) {
                             if (ongoingCall) {
                                 ongoingCall = false;
+                            }
+                            if (!pausedByUser){
                                 resumeMedia();
                             }
                         }
@@ -462,6 +470,7 @@ public class LocalBinder extends Binder {
 
         String text = activeAudio.getArtist() + " : " + activeAudio.getTitle();
         Piotrek.mainActivity.setActionBarText(text);
+
     }
     private void skipToNext() {
 
@@ -647,13 +656,16 @@ public class LocalBinder extends Binder {
         return super.onStartCommand(intent, flags, startId);
     }
     /**methods for musiccontroller*/
-    public int getPosn(){
-
-        return mediaPlayer.getCurrentPosition();
+    public int getPosn() {
+        if (!released)
+            return mediaPlayer.getCurrentPosition();
+        else return 0;
     }
 
-    public int getDur(){
+    public int getDur() {
+        if (!released)
         return mediaPlayer.getDuration();
+        else return 0;
     }
 
     public boolean isPng(){
@@ -665,8 +677,10 @@ public class LocalBinder extends Binder {
     }
 
     public void seek(int posn){
-        mediaPlayer.seekTo(posn);
-        resumePosition = posn;
+        if (mpIsPrepared) {
+            mediaPlayer.seekTo(posn);
+            resumePosition = posn;
+        }
     }
     public boolean isPlaying(){
         return mediaPlayer.isPlaying();
