@@ -30,6 +30,7 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 //import static com.example.nikita.playerdemo.MainActivity.Broadcast_PAUSE_AUDIO;
 import static com.example.nikita.playerdemo.MainActivity.Broadcast_PLAY_NEW_AUDIO;
@@ -50,6 +51,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
     private TelephonyManager telephonyManager;
     private boolean pausedByUser = false;
     boolean released = false;
+    private boolean shuffle=false;
+    private Random rand;
 
     //List of available Audio files
     private ArrayList<Audio> audioList;
@@ -88,6 +91,7 @@ private final IBinder iBinder = new LocalBinder();
         //Listen for new Audio to play -- BroadcastReceiver
         register_playNewAudio();
         released = false;
+        rand=new Random();
     }
     @Override
     public void onDestroy() {
@@ -246,6 +250,7 @@ public class LocalBinder extends Binder {
         mediaPlayer.setOnInfoListener(this);
         //Reset so that the MediaPlayer is not pointing to another data source
         mediaPlayer.reset();
+        released = false;
 
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         try {
@@ -254,7 +259,11 @@ public class LocalBinder extends Binder {
             e.printStackTrace();
             stopSelf();
         }
-        mediaPlayer.prepareAsync();
+        try{
+        mediaPlayer.prepareAsync();}
+        catch (IllegalStateException exc){
+            Toast.makeText(getApplicationContext(), getResources().getString(R.string.not_found),Toast.LENGTH_LONG).show();
+        }
     }
   //  if statements to make sure there are no problems while playing media
   private void playMedia() {
@@ -473,25 +482,27 @@ public class LocalBinder extends Binder {
 
     }
     private void skipToNext() {
-
-        if (audioIndex == audioList.size() - 1) {
-            //if last in playlist
-            audioIndex = 0;
-            activeAudio = audioList.get(audioIndex);
-        } else {
-            //get next in playlist
-            activeAudio = audioList.get(++audioIndex);
+        if (shuffle) {
+            audioIndex = rand.nextInt(audioList.size());
         }
+            if (audioIndex == audioList.size() - 1  ) {
+                //if last in playlist
+                audioIndex = 0;
+                activeAudio = audioList.get(audioIndex);
+            } else {
+                //get next in playlist
+                activeAudio = audioList.get(++audioIndex);
+            }
 
-        //Update stored index
-        new StorageUtil(getApplicationContext()).storeAudioIndex(audioIndex);
+            //Update stored index
+            new StorageUtil(getApplicationContext()).storeAudioIndex(audioIndex);
 
-        stopMedia();
-        //reset mediaPlayer
-        mediaPlayer.reset();
-        initMediaPlayer();
+            stopMedia();
+            //reset mediaPlayer
+            mediaPlayer.reset();
+            initMediaPlayer();
+
     }
-
     private void skipToPrevious() {
 
         if (audioIndex == 0) {
@@ -516,17 +527,16 @@ public class LocalBinder extends Binder {
 
         int notificationAction = android.R.drawable.ic_media_pause;//needs to be initialized
         PendingIntent play_pauseAction = null;
-
         Piotrek.mainActivity.buildNotification(playbackStatus);
 
         //Build a new notification according to the current state of the MediaPlayer
+        String PlayStatus = "PAUSE";
         if (playbackStatus == PlaybackStatus.PLAYING) {
             notificationAction = android.R.drawable.ic_media_pause;
-
-
             //create the pause action
             play_pauseAction = playbackAction(1);
         } else if (playbackStatus == PlaybackStatus.PAUSED) {
+            PlayStatus = "PLAY";
             notificationAction = android.R.drawable.ic_media_play;
             //create the play action
             play_pauseAction = playbackAction(0);
@@ -534,10 +544,6 @@ public class LocalBinder extends Binder {
 
         Bitmap largeIcon = BitmapFactory.decodeResource(getResources(),
                 R.drawable.image); //replace with your own image
-        String PlayStatus = "PAUSE";
-        if(playbackStatus == PlaybackStatus.PAUSED){
-            PlayStatus = "PLAY";
-        }
         // Create a new Notification
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
                 .setShowWhen(false)
@@ -560,7 +566,6 @@ public class LocalBinder extends Binder {
                 .setContentInfo(activeAudio.getTitle())
                 // Add playback actions
                 .addAction(android.R.drawable.ic_media_previous, "previous", playbackAction(3))
-
                 .addAction(notificationAction, PlayStatus, play_pauseAction)
                 .addAction(android.R.drawable.ic_media_next, "next", playbackAction(2));
 
@@ -657,15 +662,21 @@ public class LocalBinder extends Binder {
     }
     /**methods for musiccontroller*/
     public int getPosn() {
-        if (!released)
+            if (mpIsPrepared) {
             return mediaPlayer.getCurrentPosition();
-        else return 0;
+            }
+            else{
+            Log.i("getPosn()", "NOT PREPARED");
+            return 0;
+        }
     }
 
+
     public int getDur() {
-        if (!released)
+        if ( mediaPlayer!=null)
         return mediaPlayer.getDuration();
-        else return 0;
+        else {
+            return 0;}
     }
 
     public boolean isPng(){
@@ -682,8 +693,8 @@ public class LocalBinder extends Binder {
             resumePosition = posn;
         }
     }
-    public boolean isPlaying(){
-        return mediaPlayer.isPlaying();
+    public void setShuffle(){
+        shuffle = !shuffle;
     }
 
     public void go(){

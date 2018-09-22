@@ -22,7 +22,7 @@
 
 
     <style name="AppTheme.Launcher">
-    <item name="android:windowBackground">@drawable/launch_screen</item>
+    <item name="android:windowBackground">@drawable/image</item>
     </style>
 
 

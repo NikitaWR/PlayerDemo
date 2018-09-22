@@ -10,5 +10,7 @@
     <string name="sort_by_artist_asc">Sort by artist ascending</string>
     <string name="sort_by_title_desc">Sort by title descending</string>
     <string name="sort_by_artist_desc">Sort by artist descending</string>
+    <string name="shuffle">shuffle play</string>
+    <string name="not_found">audio not found, update your playlist</string>
 
 </resources>

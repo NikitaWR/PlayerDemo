@@ -5,7 +5,10 @@
         android:id="@+id/search_menu"
         android:title="@string/search"
         app:showAsAction="never"/>
-
+    <item
+        android:id="@+id/shuffle_play"
+        android:title="@string/shuffle"
+        app:showAsAction="never"/>
     <item
         android:id="@+id/order_id_asc"
         android:title="@string/sort_by_title_asc"

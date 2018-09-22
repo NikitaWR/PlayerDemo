@@ -99,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
             //return false;
         }else {
+            initDB();
             //check if first time than load data from device to DB
             if (!prefs.getBoolean("firstTime", false)) {
                 Log.i("OnCreate", "first time!");
@@ -111,7 +112,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
            // if (!loadAudio()) creatAlertDialog();
             //else {
             //load from DB
-            initDB();
+
             loadData();
            // }
         }
@@ -150,10 +151,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             player = binder.getService();
             serviceBound = true;
 
-            initSeekBar();
+
             initPlayMenu();
             LinearLayout playMenu = findViewById(R.id.play_menu);
             playMenu.setVisibility(View.VISIBLE);
+            initSeekBar();
 
             handler = new Handler();
             seekPosition();
@@ -206,7 +208,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         Cursor cursor = contentResolver.query(uri, null, selection, null, sortOrder);
 
         if (cursor != null && cursor.getCount() > 0) {
-            initDB();
             int size = 0;
             while (cursor.moveToNext()) {
                 String data = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
@@ -269,6 +270,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
         if (audioListSearch.size()>0)
         mTitleTextView.setText((getResources().getString(R.string.search) +" " + "\"" +  search + "\""));
+
+
         initRecyclerView(audioListSearch);
         cursor.close();
     }
@@ -345,6 +348,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " DESC");
                 loadData();
                 initRecyclerView(audioList);
+                return true;
+            case R.id.shuffle_play:
+                player.setShuffle();
 
                 return true;
             default:
@@ -474,15 +480,17 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
         seekBar = findViewById(R.id.seekBar3);
         Log.d("setMax", String.valueOf(getDuration()));
-        seekBar.setMax(getDuration());
+
         /*seekBar.setVisibility(View.VISIBLE);*/
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
                 if (input) {
+
                     Log.d("onProgressChanged", "progress "+String.valueOf(progress)+ "   duration " + getDuration());
                     player.seek(progress);
+
                 }
             }
 
@@ -500,13 +508,12 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
     private void seekPosition() {
 
-       // try {
+        try {
             long totalDuration = getDuration();
             long currentDuration = getCurrentPosition();
+            seekBar.setMax(getDuration());
+            seekBar.setProgress(getCurrentPosition());
 
-
-
-            seekBar.setProgress(player.getPosn());
 
             songTotalDuration = findViewById(R.id.songTotalDuration);
             songCurrentDuration = findViewById(R.id.songCurrentDuration);
@@ -524,8 +531,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 }
             };
             handler.postDelayed(runnable, 200);
-       // }
-       // catch (Exception e){e.printStackTrace();}
+        }
+        catch (Exception e){e.printStackTrace();}
 
     }
 
@@ -581,6 +588,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             case MY_PERMISSIONS_READ_EXTERNAL_STORAGE: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // access granted
+                    initDB();
                     //but gotta check however was it first start
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
                     if(!prefs.getBoolean("firstTime", false)) {
@@ -592,7 +600,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     }
                    // if (!loadAudio())creatAlertDialog();
                     //else {
-                        initDB();
+
                         loadData();
                    // }
 

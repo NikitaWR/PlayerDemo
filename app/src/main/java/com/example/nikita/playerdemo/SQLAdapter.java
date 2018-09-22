@@ -102,7 +102,8 @@ public class SQLAdapter {
 
         }
         mCursor = mDb.query(Audios.TABLE_NAME, new String[]{Audios._ID, COLUMN_NAME_DATA,
-                        Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM},Audios.COLUMN_NAME_ARTIST + " like '%" + inputText + "%'" + " OR " +
+                        Audios.COLUMN_NAME_ARTIST, Audios.COLUMN_NAME_TITLE,Audios.COLUMN_NAME_ALBUM},
+                Audios.COLUMN_NAME_ARTIST + " like '%" + inputText + "%'" + " OR " +
                         Audios.COLUMN_NAME_TITLE+ " like '%" + inputText + "%'",
                 null, null, null, orderBy, null);
 
