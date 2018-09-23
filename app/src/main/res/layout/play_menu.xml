@@ -84,7 +84,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:visibility="visible"
-            app:srcCompat="@drawable/ic_action_pause" />
+            app:srcCompat="@drawable/ic_action_play" />
 
         <ImageButton
             android:id="@+id/next"

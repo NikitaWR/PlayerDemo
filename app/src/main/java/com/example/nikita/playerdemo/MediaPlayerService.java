@@ -116,7 +116,7 @@ private final IBinder iBinder = new LocalBinder();
 
 
         //clear cached playlist
-        new StorageUtil(getApplicationContext()).clearCachedAudioPlaylist();
+      //  new StorageUtil(getApplicationContext()).clearCachedAudioPlaylist();
     }
 @Override
 public IBinder onBind(Intent intent) {
@@ -524,7 +524,6 @@ public class LocalBinder extends Binder {
         initMediaPlayer();
     }
     private void buildNotification(PlaybackStatus playbackStatus) {
-
         int notificationAction = android.R.drawable.ic_media_pause;//needs to be initialized
         PendingIntent play_pauseAction = null;
         Piotrek.mainActivity.buildNotification(playbackStatus);
@@ -654,6 +653,7 @@ public class LocalBinder extends Binder {
                 stopSelf();
             }
             buildNotification(PlaybackStatus.PLAYING);
+
         }
 
         //Handle Intent action from MediaSession.TransportControls
@@ -712,3 +712,6 @@ public class LocalBinder extends Binder {
 
     }
 }
+
+
+

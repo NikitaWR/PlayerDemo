@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     boolean serviceBound = false;
     boolean letUseKeyBack = false;
     boolean setShuffle=false;
+    final StorageUtil storageUtil = new StorageUtil(this);
     private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
     private String actionBarText;
@@ -85,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         mTitleTextView = mCustomView.findViewById(R.id.title);
         mActionBar.setCustomView(mCustomView);
         mActionBar.setDisplayShowCustomEnabled(true);
-        mActionBar.hide();
+       // mActionBar.hide();
         progressBar = findViewById(R.id.progressBar);
         progressBar.setVisibility(View.VISIBLE);
         loadingData = findViewById(R.id.loadingData);
@@ -117,8 +118,15 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
            // if (!loadAudio()) creatAlertDialog();
             //else {
             //load from DB
-
+            audioList = storageUtil.loadAudio();
+            if (audioList==null){
+           //if (audioList.size()<=0)
             loadData();
+            }
+            else {initRecyclerView(audioList);
+            setActionBarText((audioList.get(storageUtil.loadAudioIndex()).getArtist()) + " : " +
+                    audioList.get(storageUtil.loadAudioIndex()).getTitle());
+            }
            // }
         }
         Piotrek.mainActivity = this;
@@ -177,9 +185,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
     private void playAudio(int audioIndex, ArrayList audioList) {
         //Check is service is active
-        if (!mActionBar.isShowing())
-            mActionBar.show();
-
         if (!serviceBound) {
             //Store Serializable audioList to SharedPreferences
             StorageUtil storage = new StorageUtil(getApplicationContext());
@@ -217,6 +222,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0";
         String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
         Cursor cursor = contentResolver.query(uri, null, selection, null, sortOrder);
+        dbHelper.deleteAllAudios();
 
         if (cursor != null && cursor.getCount() > 0) {
             int size = 0;
@@ -590,18 +596,28 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         previous.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (serviceBound)
                 player.playPrev();
             }
         });
         next.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (serviceBound)
                 player.playNext();
             }
         });
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (!serviceBound) {
+                    int audioIndex=storageUtil.loadAudioIndex();
+                    if (audioIndex >= 0) {
+                        playAudio(audioIndex, audioList);
+                        buildNotification(PlaybackStatus.PLAYING);
+                    }
+                }
+                else if (serviceBound){
                 if (player.isPng()) {
                     pause();
                     player.pausedByUser(true);
@@ -610,20 +626,21 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     start();
                     player.pausedByUser(false);
                 }
+                }
             }
 
         });
     }
 
     public void buildNotification(PlaybackStatus playbackStatus) {
-        if (serviceBound) {
+
             if (playbackStatus == PlaybackStatus.PLAYING) {
                 play.setImageResource(R.drawable.ic_action_pause);
 
             } else if (playbackStatus == PlaybackStatus.PAUSED) {
                 play.setImageResource(R.drawable.ic_action_play);
             }
-        }
+
     }
 
     @Override
@@ -641,8 +658,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                         Log.i("OnPermissionResult", "first time!");
                         editor.putBoolean("firstTime", true);
                         editor.apply();
+
                         loadAudio();//load to DB
-                    }
+                    }else Log.i("OnPermissionResult", "not first time!");
                    // if (!loadAudio())creatAlertDialog();
                     //else {
 
