@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     private MediaPlayerService player;
     boolean serviceBound = false;
     boolean letUseKeyBack = false;
+    boolean setShuffle=false;
     private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
     public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
     private String actionBarText;
@@ -58,9 +59,12 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     private ActionBar mActionBar;
     private Runnable runnable;
     private Handler handler;
+
     ImageButton play;
     ImageButton previous;
     ImageButton next;
+    ImageButton shuffle;
+    ImageButton search;
     ProgressBar progressBar;
     TextView loadingData;
     TextView songCurrentDuration;
@@ -87,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         loadingData = findViewById(R.id.loadingData);
         recyclerView = findViewById(R.id.recyclerview);
         loadingData.setVisibility(View.VISIBLE);
+        setShuffle = false;
 
        // checkPermissions();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -117,6 +122,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
            // }
         }
         Piotrek.mainActivity = this;
+        initPlayMenu();
+        LinearLayout playMenu = findViewById(R.id.play_menu);
+        playMenu.setVisibility(View.VISIBLE);
     }
 
     void setActionBarText(String myText) {
@@ -132,6 +140,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             RecyclerView_Adapter adapter = new RecyclerView_Adapter(audioList, getApplication());
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
+            recyclerView.setVisibility(View.VISIBLE);
             recyclerView.addOnItemTouchListener(new CustomTouchListener(this, new onItemClickListener() {
                 @Override
                 public void onClick(View view, int index) {
@@ -150,12 +159,10 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) service;
             player = binder.getService();
             serviceBound = true;
-
-
-            initPlayMenu();
-            LinearLayout playMenu = findViewById(R.id.play_menu);
-            playMenu.setVisibility(View.VISIBLE);
             initSeekBar();
+            if (setShuffle = true)
+                player.setShuffle();
+            setShuffle =false;
 
             handler = new Handler();
             seekPosition();
@@ -193,7 +200,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             //Send a broadcast to the service -> PLAY_NEW_AUDIO
             Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
             sendBroadcast(broadcastIntent);
+            if (setShuffle = true)
+                player.setShuffle();
+            setShuffle =false;
         }
+
     }
 
     //retrieves the data from the device in ascending order
@@ -288,43 +299,38 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.reset_db:
+                recyclerView.setVisibility(View.INVISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
+                loadingData.setVisibility(View.VISIBLE);
+                final Runnable runLoadData = new Runnable() {
+                    @Override
+                    public void run() {
+                        loadData();
+                    }
+                };
+                final Runnable runInitRV = new Runnable() {
+                    @Override
+                    public void run() {
+                        initRecyclerView(audioList);
+                    }
+                };
+                Thread mythread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        dbHelper.deleteAllAudios();
+                        loadAudio();
+                        MainActivity.this.runOnUiThread(runLoadData);
+                        MainActivity.this.runOnUiThread(runInitRV);
+                    }
+                });
+                mythread.start();
+                return true;
             case R.id.home:
                 // go back to audioList intstead of audioListSearch
                 initRecyclerView(audioList);
                 //hide up button
                 mActionBar.setDisplayHomeAsUpEnabled(false);
-                return true;
-            case R.id.search_menu:
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle(R.string.search);
-
-                View viewInflated = LayoutInflater.from(this).inflate(R.layout.search_window, null);
-
-                final EditText bodyInput = viewInflated.findViewById(R.id.searchWindow);
-                builder.setView(viewInflated);
-
-
-                builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.dismiss();
-                                String body = bodyInput.getText().toString();
-                                fetchByArtistAndTitle(body);
-                                letUseKeyBack=true;
-
-                                //show up button
-                                /*mActionBar.setDisplayHomeAsUpEnabled(true);
-                                mActionBar.setHomeButtonEnabled(true);*/
-                            }
-                });
-                builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                });
-
-                builder.show();
                 return true;
 
             case R.id.order_id_asc:
@@ -348,10 +354,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " DESC");
                 loadData();
                 initRecyclerView(audioList);
-                return true;
-            case R.id.shuffle_play:
-                player.setShuffle();
-
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -541,6 +543,49 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         play = findViewById(R.id.play);
         previous = findViewById(R.id.previous);
         next = findViewById(R.id.next);
+        shuffle= findViewById(R.id.shuffle_play);
+        search=findViewById(R.id.search);
+        search.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.search);
+
+                View viewInflated = LayoutInflater.from(getApplicationContext()).inflate(R.layout.search_window, null);
+
+                final EditText bodyInput = viewInflated.findViewById(R.id.searchWindow);
+                builder.setView(viewInflated);
+
+
+                builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        String body = bodyInput.getText().toString();
+                        fetchByArtistAndTitle(body);
+                        letUseKeyBack=true;
+                    }
+                });
+                builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+                builder.show();
+            }
+        });
+        shuffle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (setShuffle){
+                    setShuffle=false;
+                    shuffle.setBackgroundColor(getResources().getColor(R.color.colorPrimaryMedium));
+                }
+                else {setShuffle = true;
+                shuffle.setBackgroundColor(getResources().getColor(R.color.colorOrange));}
+            }
+        });
 
         previous.setOnClickListener(new View.OnClickListener() {
             @Override

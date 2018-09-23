@@ -6,6 +6,7 @@
     <string name="nothing_found">nothing found</string>
     <string name="loading_data">loading data</string>
     <string name="search">Search</string>
+    <string name="reset">Update playlist</string>
     <string name="sort_by_title_asc">Sort by title ascending</string>
     <string name="sort_by_artist_asc">Sort by artist ascending</string>
     <string name="sort_by_title_desc">Sort by title descending</string>

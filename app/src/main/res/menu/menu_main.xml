@@ -2,12 +2,8 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/search_menu"
-        android:title="@string/search"
-        app:showAsAction="never"/>
-    <item
-        android:id="@+id/shuffle_play"
-        android:title="@string/shuffle"
+        android:id="@+id/reset_db"
+        android:title="@string/reset"
         app:showAsAction="never"/>
     <item
         android:id="@+id/order_id_asc"
