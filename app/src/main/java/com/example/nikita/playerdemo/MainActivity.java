@@ -1,11 +1,13 @@
 package com.example.nikita.playerdemo;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -20,7 +22,6 @@ import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -41,7 +42,7 @@ import android.widget.SeekBar;
 import android.widget.MediaController.MediaPlayerControl;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import static com.example.nikita.playerdemo.MediaPlayerService.Broadcast_NOTIFY_DATA_SET_CHANGED;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
@@ -60,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     private ActionBar mActionBar;
     private Runnable runnable;
     private Handler handler;
+    private RecyclerView_Adapter adapter;
 
     ImageButton play;
     ImageButton previous;
@@ -86,12 +88,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         mTitleTextView = mCustomView.findViewById(R.id.title);
         mActionBar.setCustomView(mCustomView);
         mActionBar.setDisplayShowCustomEnabled(true);
-       // mActionBar.hide();
         progressBar = findViewById(R.id.progressBar);
         progressBar.setVisibility(View.VISIBLE);
         loadingData = findViewById(R.id.loadingData);
-        recyclerView = findViewById(R.id.recyclerview);
         loadingData.setVisibility(View.VISIBLE);
+        recyclerView = findViewById(R.id.recyclerview);
         setShuffle = false;
 
        // checkPermissions();
@@ -103,25 +104,14 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
-            //return false;
         }else {
             initDB();
-            //check if first time than load data from device to DB
-            if (!prefs.getBoolean("firstTime", false)) {
-                Log.i("OnCreate", "first time!");
-                Log.i("OnCreate", String.valueOf(prefs.getBoolean("firstTime", true)));
-                loadAudio();//load to DB
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putBoolean("firstTime", true);
-                editor.apply();
-            } else Log.i("OnCreate", "not first time");
-           // if (!loadAudio()) creatAlertDialog();
-            //else {
             //load from DB
             audioList = storageUtil.loadAudio();
             if (audioList==null){
            //if (audioList.size()<=0)
-            loadData();
+            loadFromDB();
+            initRecyclerView(audioList);
             }
             else {initRecyclerView(audioList);
             setActionBarText((audioList.get(storageUtil.loadAudioIndex()).getArtist()) + " : " +
@@ -145,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         if (audioList.size() > 0) {
             progressBar.setVisibility(View.INVISIBLE);
             loadingData.setVisibility(View.INVISIBLE);
-            RecyclerView_Adapter adapter = new RecyclerView_Adapter(audioList, getApplication());
+            adapter = new RecyclerView_Adapter(audioList, getApplication());
             recyclerView.setAdapter(adapter);
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
             recyclerView.setVisibility(View.VISIBLE);
@@ -153,6 +143,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 @Override
                 public void onClick(View view, int index) {
                     playAudio(index, audioList);
+
                 }
             }));
         }
@@ -168,18 +159,15 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             player = binder.getService();
             serviceBound = true;
             initSeekBar();
-            if (setShuffle = true)
-                player.setShuffle();
-            setShuffle =false;
-
             handler = new Handler();
             seekPosition();
-
+         /*   register_Notyfy_Data_Set_Changed();*/
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             serviceBound = false;
+            /*unregisterReceiver(notyfy_Data_Set_Changed);*/
         }
     };
 
@@ -205,17 +193,32 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             //Send a broadcast to the service -> PLAY_NEW_AUDIO
             Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
             sendBroadcast(broadcastIntent);
-            if (setShuffle = true)
-                player.setShuffle();
-            setShuffle =false;
         }
+    }
+/*    private void register_Notyfy_Data_Set_Changed() {
 
+        IntentFilter filter = new IntentFilter(Broadcast_PLAY_NEW_AUDIO);
+        registerReceiver(notyfy_Data_Set_Changed, filter);
+    }
+    private BroadcastReceiver notyfy_Data_Set_Changed = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (intent.getAction().equals(Broadcast_NOTIFY_DATA_SET_CHANGED)) {
+                Log.i("MainActivity", "notyfy_Data_Set_Changed");
+                adapter.notifyDataSetChanged();
+            }
+        }
+    };*/
+      public void notifyDataSetChanged(){
+      adapter.notifyDataSetChanged();
     }
 
     //retrieves the data from the device in ascending order
     private boolean  loadAudio() {
 
         Log.i("load audio", "la");
+        progressBar.setVisibility(View.VISIBLE);
         ContentResolver contentResolver = getContentResolver();
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
@@ -236,11 +239,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             }
             Log.i("load audio list size", String.valueOf(size));
 
-
             cursor.close();
+            loadFromDB();
             return true;
-
         } else {
+            Log.i("Load audio", "AlertDialog");
             creatAlertDialog();
             return false;}
     }
@@ -251,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     //load audio from db to array
-    void loadData() {
+    void loadFromDB() {
         audioList = new ArrayList<>();
         Cursor cursor
                 = dbHelper.fetchAllAudios();
@@ -268,11 +271,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             audioList.add(audio);
             size++;
         }while (cursor.moveToNext());
-        initRecyclerView(audioList);
-        Log.i("load data list size", String.valueOf(size));
-        cursor.close();
+         cursor.close();
+
         }
-        else creatAlertDialog();
+        else loadAudio();
+
     }
     void fetchByArtistAndTitle(String search){
         ArrayList audioListSearch = new ArrayList();
@@ -312,7 +315,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 final Runnable runLoadData = new Runnable() {
                     @Override
                     public void run() {
-                        loadData();
+                        loadFromDB();
                     }
                 };
                 final Runnable runInitRV = new Runnable() {
@@ -341,24 +344,24 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
             case R.id.order_id_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " ASC");
-                loadData();
+                loadFromDB();
                 initRecyclerView(audioList);
                 return true;
 
             case R.id.order_id_desc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " DESC");
-                loadData();
+                loadFromDB();
                 initRecyclerView(audioList);
                 return true;
 
             case R.id.order_name_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " ASC");
-                loadData();
+                loadFromDB();
                 initRecyclerView(audioList);
                 return true;
             case R.id.order_name_desc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " DESC");
-                loadData();
+                loadFromDB();
                 initRecyclerView(audioList);
                 return true;
             default:
@@ -489,8 +492,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         seekBar = findViewById(R.id.seekBar3);
         Log.d("setMax", String.valueOf(getDuration()));
 
-        /*seekBar.setVisibility(View.VISIBLE);*/
-
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean input) {
@@ -498,7 +499,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
                     Log.d("onProgressChanged", "progress "+String.valueOf(progress)+ "   duration " + getDuration());
                     player.seek(progress);
-
                 }
             }
 
@@ -584,12 +584,14 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         shuffle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                setShuffle = !setShuffle;
+                player.setShuffle(setShuffle);
                 if (setShuffle){
-                    setShuffle=false;
-                    shuffle.setBackgroundColor(getResources().getColor(R.color.colorPrimaryMedium));
+                    shuffle.setBackgroundColor(getResources().getColor(R.color.colorOrange));
                 }
-                else {setShuffle = true;
-                shuffle.setBackgroundColor(getResources().getColor(R.color.colorOrange));}
+                else {
+                shuffle.setBackgroundColor(getResources().getColor(R.color.colorPrimaryMedium));
+                }
             }
         });
 
@@ -632,6 +634,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         });
     }
 
+
     public void buildNotification(PlaybackStatus playbackStatus) {
 
             if (playbackStatus == PlaybackStatus.PLAYING) {
@@ -651,22 +654,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // access granted
                     initDB();
-                    //but gotta check however was it first start
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                    if(!prefs.getBoolean("firstTime", false)) {
-                        SharedPreferences.Editor editor = prefs.edit();
-                        Log.i("OnPermissionResult", "first time!");
-                        editor.putBoolean("firstTime", true);
-                        editor.apply();
-
-                        loadAudio();//load to DB
-                    }else Log.i("OnPermissionResult", "not first time!");
-                   // if (!loadAudio())creatAlertDialog();
-                    //else {
-
-                        loadData();
-                   // }
-
+                    loadFromDB();
+                    initRecyclerView(audioList);
                 } else {
                     // access denied
                     closeNow();
