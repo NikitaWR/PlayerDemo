@@ -6,7 +6,8 @@
         android:id="@+id/searchWindow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/search"
+        android:layout_marginTop="17dp"
+        android:hint="@string/enter_part_of"
         android:imeOptions="actionDone"
         android:inputType="textAutoComplete|textMultiLine" />
 

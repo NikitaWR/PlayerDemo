@@ -1,13 +1,12 @@
 package com.example.nikita.playerdemo;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -42,7 +41,7 @@ import android.widget.SeekBar;
 import android.widget.MediaController.MediaPlayerControl;
 import android.widget.TextView;
 import android.widget.Toast;
-import static com.example.nikita.playerdemo.MediaPlayerService.Broadcast_NOTIFY_DATA_SET_CHANGED;
+
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
@@ -119,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             }
            // }
         }
-        Piotrek.mainActivity = this;
+        InstanceOfMainActivity.mainActivity = this;
         initPlayMenu();
         LinearLayout playMenu = findViewById(R.id.play_menu);
         playMenu.setVisibility(View.VISIBLE);
@@ -195,21 +194,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             sendBroadcast(broadcastIntent);
         }
     }
-/*    private void register_Notyfy_Data_Set_Changed() {
-
-        IntentFilter filter = new IntentFilter(Broadcast_PLAY_NEW_AUDIO);
-        registerReceiver(notyfy_Data_Set_Changed, filter);
-    }
-    private BroadcastReceiver notyfy_Data_Set_Changed = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-            if (intent.getAction().equals(Broadcast_NOTIFY_DATA_SET_CHANGED)) {
-                Log.i("MainActivity", "notyfy_Data_Set_Changed");
-                adapter.notifyDataSetChanged();
-            }
-        }
-    };*/
       public void notifyDataSetChanged(){
       adapter.notifyDataSetChanged();
     }
@@ -234,7 +218,12 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                 String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
-                dbHelper.createAudio(data, title, album, artist);
+                Long albumId = Long.valueOf(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)));
+
+
+                final  Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
+                Uri artPath = ContentUris.withAppendedId(sArtworkUri, albumId);
+                dbHelper.createAudio(data, title, album, artist,artPath.toString());
                 size++;
             }
             Log.i("load audio list size", String.valueOf(size));
@@ -267,7 +256,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     cursor.getColumnIndex("data")),
                     cursor.getString(cursor.getColumnIndex("title")),
                     cursor.getString(cursor.getColumnIndex("album")),
-                    cursor.getString(cursor.getColumnIndex("artist")));
+                    cursor.getString(cursor.getColumnIndex("artist")),
+                    cursor.getString(cursor.getColumnIndex("artPath")));
             audioList.add(audio);
             size++;
         }while (cursor.moveToNext());
@@ -285,7 +275,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     cursor.getColumnIndex("data"))),
                     cursor.getString(cursor.getColumnIndex("title")),
                     cursor.getString(cursor.getColumnIndex("album")),
-                    cursor.getString(cursor.getColumnIndex("artist")));
+                    cursor.getString(cursor.getColumnIndex("artist")),
+                    cursor.getString(cursor.getColumnIndex("artPath")));
             audioListSearch.add(audio);
         }
         if (audioListSearch.size()>0)

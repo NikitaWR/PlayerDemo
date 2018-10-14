@@ -16,25 +16,25 @@ import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.session.MediaSessionManager;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
-import android.os.RemoteException;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.media.AudioAttributesCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.widget.MediaController;
 import android.widget.Toast;
 
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -284,7 +284,7 @@ public class LocalBinder extends Binder {
           released=false;
          /* Intent broadcastIntent = new Intent(Broadcast_NOTIFY_DATA_SET_CHANGED);
           sendBroadcast(broadcastIntent);*/
-          Piotrek.mainActivity.notifyDataSetChanged();
+          InstanceOfMainActivity.mainActivity.notifyDataSetChanged();
 
       }
   }
@@ -506,7 +506,7 @@ Log.i("MediaPlayerService","resume media");
                 .build());
 
         String text = activeAudio.getArtist() + " : " + activeAudio.getTitle();
-        Piotrek.mainActivity.setActionBarText(text);
+        InstanceOfMainActivity.mainActivity.setActionBarText(text);
 
     }
     private void skipToNext() {
@@ -554,7 +554,7 @@ Log.i("MediaPlayerService","resume media");
         int notificationAction = android.R.drawable.ic_media_pause;//needs to be initialized
        // Intent notificationIntent = new Intent(getApplicationContext(), MainActivity.class);
         PendingIntent play_pauseAction = null;
-        Piotrek.mainActivity.buildNotification(playbackStatus);
+        InstanceOfMainActivity.mainActivity.buildNotification(playbackStatus);
 
         //Build a new notification according to the current state of the MediaPlayer
         String PlayStatus = "PAUSE";
@@ -568,9 +568,21 @@ Log.i("MediaPlayerService","resume media");
             //create the play action
             play_pauseAction = playbackAction(0);
         }
+        InputStream is = null;
 
-        Bitmap largeIcon = BitmapFactory.decodeResource(getResources(),
-                R.drawable.image); //replace with your own image
+        try {
+            Log.i("Uri: ", activeAudio.getArtPath());
+            Log.i("Data: ", activeAudio.getData());
+            is = getContentResolver().openInputStream(Uri.parse(activeAudio.getArtPath()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Bitmap largeIcon= BitmapFactory.decodeStream(is);
+
+        if (largeIcon == null){
+         largeIcon = BitmapFactory.decodeResource(getResources(),
+                R.drawable.image); }
+
         //creat notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -594,7 +606,7 @@ Log.i("MediaPlayerService","resume media");
                 // Set the Notification style
                 .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
                 // Attach our MediaSession token
-                        .setMediaSession(mediaSession.getSessionToken())
+                .setMediaSession(mediaSession.getSessionToken())
                 // Show our playback controls in the compact notification view.
                 .setShowActionsInCompactView(0, 1, 2))
                 //
@@ -725,7 +737,7 @@ Log.i("MediaPlayerService","resume media");
 
     public int getDur() {
         if (!released){
-            Log.i("MediaPlayerService","getDur");
+          //  Log.i("MediaPlayerService","getDur");
         return mediaPlayer.getDuration();}
         else {
             return -1;}
