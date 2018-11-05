@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package developer.nk.spplayer;
 
 
 import android.app.NotificationChannel;
@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -31,15 +32,14 @@ import android.util.Log;
 import android.widget.Toast;
 
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Random;
 
-//import static com.example.nikita.playerdemo.MainActivity.Broadcast_PAUSE_AUDIO;
-import static com.example.nikita.playerdemo.MainActivity.Broadcast_PLAY_NEW_AUDIO;
+
+
+import static developer.nk.spplayer.MainActivity.Broadcast_PLAY_NEW_AUDIO;
 
 public class MediaPlayerService extends Service implements MediaPlayer.OnCompletionListener,
         MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnSeekCompleteListener,
@@ -59,7 +59,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
     boolean released = true;
     private boolean shuffle=false;
     private Random rand;
-    public final static String Broadcast_NOTIFY_DATA_SET_CHANGED = "com.example.nikita.playerdemo";
+    public final static String Broadcast_NOTIFY_DATA_SET_CHANGED = "developer.nk.spplayer";
 
     //List of available Audio files
     private ArrayList<Audio> audioList;
@@ -69,11 +69,11 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnComplet
 
 // Binder given to clients
 private final IBinder iBinder = new LocalBinder();
-    public static final String ACTION_PLAY = "com.example.nikita.playerdemo.ACTION_PLAY";
-    public static final String ACTION_PAUSE = "com.example.nikita.playerdemo.ACTION_PAUSE";
-    public static final String ACTION_PREVIOUS = "com.example.nikita.playerdemo.ACTION_PREVIOUS";
-    public static final String ACTION_NEXT = "com.example.nikita.playerdemo.ACTION_NEXT";
-    public static final String ACTION_STOP = "com.example.nikita.playerdemo.ACTION_STOP";
+    public static final String ACTION_PLAY = "developer.nk.spplayer.ACTION_PLAY";
+    public static final String ACTION_PAUSE = "developer.nk.spplayer.ACTION_PAUSE";
+    public static final String ACTION_PREVIOUS = "developer.nk.spplayer.playerdemo.ACTION_PREVIOUS";
+    public static final String ACTION_NEXT = "developer.nk.spplayer.ACTION_NEXT";
+    public static final String ACTION_STOP = "developer.nk.spplayer.ACTION_STOP";
 
     //MediaSession
     private MediaSessionManager mediaSessionManager;
@@ -259,6 +259,7 @@ public class LocalBinder extends Binder {
         mediaPlayer.setOnInfoListener(this);
         //Reset so that the MediaPlayer is not pointing to another data source
         mediaPlayer.reset();
+        if (Build.VERSION.SDK_INT >= 21)
         mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -418,9 +419,8 @@ Log.i("MediaPlayerService","resume media");
     }*/
 
     private void initMediaSession() {
-        if (mediaSessionManager != null) return; //mediaSessionManager exists
-
-        mediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
+        if (Build.VERSION.SDK_INT >= 21 && mediaSessionManager != null) {
+        mediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);}
         // Create a new MediaSession
         mediaSession = new MediaSessionCompat(getApplicationContext(), "AudioPlayer");
         //Get MediaSessions transport controls
@@ -569,20 +569,23 @@ Log.i("MediaPlayerService","resume media");
             play_pauseAction = playbackAction(0);
         }
         InputStream is = null;
-
+        final long identity = Binder.clearCallingIdentity();
         try {
             Log.i("Uri: ", activeAudio.getArtPath());
             Log.i("Data: ", activeAudio.getData());
-            is = getContentResolver().openInputStream(Uri.parse(activeAudio.getArtPath()));
+            ContentResolver contentResolver = getContentResolver();
+
+            is= contentResolver.openInputStream(Uri.parse(activeAudio.getArtPath()));
         } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            Binder.restoreCallingIdentity(identity);
         }
         Bitmap largeIcon= BitmapFactory.decodeStream(is);
 
         if (largeIcon == null){
          largeIcon = BitmapFactory.decodeResource(getResources(),
                 R.drawable.image); }
-
         //creat notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -597,7 +600,7 @@ Log.i("MediaPlayerService","resume media");
             mChannel.setLightColor(Color.RED);
             mChannel.enableVibration(true);
             mChannel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-            mChannel.setShowBadge(true);
+            //mChannel.setShowBadge(true);
             notificationManager.createNotificationChannel(mChannel);
         }
         // Create a new Notification
@@ -611,7 +614,7 @@ Log.i("MediaPlayerService","resume media");
                 .setShowActionsInCompactView(0, 1, 2))
                 //
                 //.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-               // .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                //.setPriority(NotificationCompat.PRIORITY_MIN)
                 // Set the Notification color
                 .setColor(getResources().getColor(R.color.colorPrimary))
                 // Set the large and small icons
@@ -707,7 +710,7 @@ Log.i("MediaPlayerService","resume media");
             stopSelf();
         }
 
-        if (mediaSessionManager == null) {
+        if (mediaSession == null) {
             try {
                 initMediaSession();
                 initMediaPlayer();

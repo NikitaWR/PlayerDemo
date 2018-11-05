@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package developer.nk.spplayer;
 
 import java.io.Serializable;
 
@@ -8,13 +8,15 @@ public class Audio implements Serializable {
     private String album;
     private String artist;
     private String artPath;
+    private String duration;
 
-    public Audio(String data, String title, String album, String artist, String artPath) {
+    public Audio(String data, String title, String album, String artist, String artPath, String duration) {
         this.data = data;
         this.title = title;
         this.album = album;
         this.artist = artist;
         this.artPath = artPath;
+        this.duration = duration;
     }
 
     public String getData() {
@@ -51,4 +53,6 @@ public class Audio implements Serializable {
     public void setArtist(String artist) {
         this.artist = artist;
     }
+    public void setDuration(String duration){this.duration = duration;}
+    public String getDuration(){return duration;}
 }

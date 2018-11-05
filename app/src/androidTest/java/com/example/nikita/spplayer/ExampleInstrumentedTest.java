@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package com.example.nikita.spplayer;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

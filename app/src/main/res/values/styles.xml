@@ -11,20 +11,29 @@
         <!--<item name="actionBarStyle">@style/Widget.Styled.ActionBar</item>
         <item name="android:actionBarStyle">@style/Widget.Styled.ActionBar</item>-->
     </style>
+
     <style name="AppTheme.OverFlow">
         <item name="android:src">@drawable/ic_action_menu</item>
     </style>
 
-   <!-- <style name="Widget.Styled.ActionBar" parent="Widget.AppCompat.ActionBar">
+    <!-- <style name="Widget.Styled.ActionBar" parent="Widget.AppCompat.ActionBar">
         <item name="android:displayOptions">showHome|useLogo</item>
         <item name="displayOptions">showHome|useLogo</item>
     </style>-->
 
 
     <style name="AppTheme.Launcher">
-    <item name="android:windowBackground">@drawable/image</item>
+        <item name="android:windowBackground">@drawable/image</item>
     </style>
 
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
 
 </resources>

@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package developer.nk.spplayer;
 
 public class InstanceOfMainActivity {
     //need to transmit somthing to MainActivity? Ask Piotrek.

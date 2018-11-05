@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package developer.nk.spplayer;
 
 import android.Manifest;
 import android.content.ComponentName;
@@ -33,6 +33,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -42,36 +43,43 @@ import android.widget.MediaController.MediaPlayerControl;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
+
     private MediaPlayerService player;
+    final StorageUtil storageUtil = new StorageUtil(this);
+    private ArrayList<Audio> audioList;
+    private RecyclerView_Adapter adapter;
+
     boolean serviceBound = false;
     boolean letUseKeyBack = false;
     boolean setShuffle=false;
-    final StorageUtil storageUtil = new StorageUtil(this);
+
     private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
-    public static final String Broadcast_PLAY_NEW_AUDIO = "com.example.nikita.playerdemo";
+    public static final String Broadcast_PLAY_NEW_AUDIO = "developer.nk.spplayer";
     private String actionBarText;
-    private ArrayList<Audio> audioList;
+
+
     private RecyclerView recyclerView;
     private TextView mTitleTextView;
     private SeekBar seekBar;
     private ActionBar mActionBar;
     private Runnable runnable;
     private Handler handler;
-    private RecyclerView_Adapter adapter;
 
-    ImageButton play;
-    ImageButton previous;
-    ImageButton next;
-    ImageButton shuffle;
-    ImageButton search;
-    ProgressBar progressBar;
-    TextView loadingData;
-    TextView songCurrentDuration;
-    TextView songTotalDuration;
-    SQLAdapter dbHelper;
+    private ImageButton play;
+    private ImageButton previous;
+    private ImageButton next;
+    private ImageButton shuffle;
+    private ImageButton search;
+    private ProgressBar progressBar;
+    private TextView loadingData;
+    private TextView songCurrentDuration;
+    private TextView songTotalDuration;
+
+    private SQLAdapter dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         setShuffle = false;
 
        // checkPermissions();
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
         if (ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -116,10 +124,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             setActionBarText((audioList.get(storageUtil.loadAudioIndex()).getArtist()) + " : " +
                     audioList.get(storageUtil.loadAudioIndex()).getTitle());
             }
-           // }
+
         }
         InstanceOfMainActivity.mainActivity = this;
         initPlayMenu();
+        makeActionOverflowMenuShown();
         LinearLayout playMenu = findViewById(R.id.play_menu);
         playMenu.setVisibility(View.VISIBLE);
     }
@@ -160,7 +169,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             initSeekBar();
             handler = new Handler();
             seekPosition();
-         /*   register_Notyfy_Data_Set_Changed();*/
+
         }
 
         @Override
@@ -219,11 +228,13 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
                 String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
                 Long albumId = Long.valueOf(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)));
+                Integer intDuration = Integer.valueOf(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)));
 
 
                 final  Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
                 Uri artPath = ContentUris.withAppendedId(sArtworkUri, albumId);
-                dbHelper.createAudio(data, title, album, artist,artPath.toString());
+                String duration =(String.format("%d:%02d", (intDuration / (1000 * 60)) % 60, intDuration / 1000 - ((intDuration / (1000 * 60)) % 60) * 60));
+                dbHelper.createAudio(data, title, album, artist,artPath.toString(), duration);
                 size++;
             }
             Log.i("load audio list size", String.valueOf(size));
@@ -257,7 +268,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     cursor.getString(cursor.getColumnIndex("title")),
                     cursor.getString(cursor.getColumnIndex("album")),
                     cursor.getString(cursor.getColumnIndex("artist")),
-                    cursor.getString(cursor.getColumnIndex("artPath")));
+                    cursor.getString(cursor.getColumnIndex("artPath")),
+                    cursor.getString(cursor.getColumnIndex("duration")));
             audioList.add(audio);
             size++;
         }while (cursor.moveToNext());
@@ -276,7 +288,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     cursor.getString(cursor.getColumnIndex("title")),
                     cursor.getString(cursor.getColumnIndex("album")),
                     cursor.getString(cursor.getColumnIndex("artist")),
-                    cursor.getString(cursor.getColumnIndex("artPath")));
+                    cursor.getString(cursor.getColumnIndex("artPath")),
+                    cursor.getString(cursor.getColumnIndex("duration")));
             audioListSearch.add(audio);
         }
         if (audioListSearch.size()>0)
@@ -355,6 +368,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 loadFromDB();
                 initRecyclerView(audioList);
                 return true;
+            case  R.id.privacy:
+                Intent intent = new Intent(this,AboutActivity.class);
+                startActivity(intent);
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -675,6 +691,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             }
         });
         builder.show();
+    }
+    private void makeActionOverflowMenuShown() {
+        //devices with hardware menu button (e.g. Samsung Note) don't show action overflow menu
+        try {
+            ViewConfiguration config = ViewConfiguration.get(this);
+            Field menuKeyField = ViewConfiguration.class.getDeclaredField("sHasPermanentMenuKey");
+            if (menuKeyField != null) {
+                menuKeyField.setAccessible(true);
+                menuKeyField.setBoolean(config, false);
+            }
+        } catch (Exception e) {
+            Log.d("ActionOverflowMenuShown", e.getLocalizedMessage());
+        }
     }
 
 }

@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package developer.nk.spplayer;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;

@@ -2,6 +2,7 @@
 <resources>
     <color name="colorPrimary">#efe6e6</color>
     <color name="colorPrimaryMedium">#c2c2c2</color>
+    <color name="colorPrimaryMediumPurple">#b39dff</color>
     <color name="colorPrimaryDark">#321a45</color>
     <color name="colorOrange">#ff8000</color>
 

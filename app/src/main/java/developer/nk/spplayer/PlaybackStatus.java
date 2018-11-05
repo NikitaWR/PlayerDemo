@@ -1,4 +1,4 @@
-package com.example.nikita.playerdemo;
+package developer.nk.spplayer;
 
 public enum PlaybackStatus {
     PLAYING,PAUSED
