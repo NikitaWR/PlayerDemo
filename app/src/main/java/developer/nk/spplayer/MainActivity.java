@@ -175,13 +175,13 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         @Override
         public void onServiceDisconnected(ComponentName name) {
             serviceBound = false;
-            /*unregisterReceiver(notyfy_Data_Set_Changed);*/
         }
     };
 
     private void playAudio(int audioIndex, ArrayList audioList) {
-        //Check is service is active
-        if (!serviceBound) {
+        //Check is service active
+       // if (!serviceBound) {
+        if (player==null){
             //Store Serializable audioList to SharedPreferences
             StorageUtil storage = new StorageUtil(getApplicationContext());
             storage.storeAudio(audioList);
@@ -192,6 +192,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         } else {
             //Store the new audioIndex to SharedPreferences
+            Log.i("sb",String.valueOf(serviceBound));
 
             StorageUtil storage = new StorageUtil(getApplicationContext());
             storage.storeAudio(audioList);
@@ -411,7 +412,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (serviceBound) {
+        //if (serviceBound) {
+        if (player!=null){
             unbindService(serviceConnection);
             //service is active
             player.stopSelf();
@@ -427,19 +429,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public void start() {
-        if (serviceBound && player!=null)
+        if (player!=null)
             player.go();
     }
 
 
     public void pause() {
-        if (serviceBound && player!=null)
+        if (player!=null)
             player.pausePlayer();
     }
 
 
     public int getDuration() {
-        if (serviceBound && seekBar != null && player!=null) {
+        if (player!=null && seekBar != null && player!=null) {
             return player.getDur();
         } else
             return 0;
@@ -447,7 +449,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
 
     public int getCurrentPosition() {
-        if (seekBar != null && serviceBound && player!=null) {
+        if (seekBar != null && player!=null) {
             return player.getPosn();
         } else
             return 0;
@@ -456,7 +458,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
     public void seekTo(int pos) {
         Log.d("seekTo", String.valueOf(pos));
-        if (seekBar != null && serviceBound)
+        if (seekBar != null && player!=null)
             player.seek(pos);
     }
 
@@ -605,28 +607,28 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         previous.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (serviceBound)
+                if (player!=null)
                 player.playPrev();
             }
         });
         next.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (serviceBound)
+                if (player!=null)
                 player.playNext();
             }
         });
         play.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!serviceBound) {
+                if (player==null) {
                     int audioIndex=storageUtil.loadAudioIndex();
                     if (audioIndex >= 0) {
                         playAudio(audioIndex, audioList);
                         buildNotification(PlaybackStatus.PLAYING);
                     }
                 }
-                else if (serviceBound){
+                else {
                 if (player.isPng()) {
                     pause();
                     player.pausedByUser(true);
