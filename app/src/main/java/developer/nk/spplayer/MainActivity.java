@@ -19,8 +19,10 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -45,14 +47,13 @@ import android.widget.Toast;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.TreeSet;
 
 public class MainActivity extends AppCompatActivity implements  MediaPlayerControl {
 
     private MediaPlayerService player;
     final StorageUtil storageUtil = new StorageUtil(this);
     private ArrayList<Audio> audioList;
-    private RecyclerView_Adapter adapter;
-
     boolean serviceBound = false;
     boolean letUseKeyBack = false;
     boolean setShuffle=false;
@@ -62,7 +63,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     private String actionBarText;
 
 
-    private RecyclerView recyclerView;
     private TextView mTitleTextView;
     private SeekBar seekBar;
     private ActionBar mActionBar;
@@ -81,6 +81,12 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
     private SQLAdapter dbHelper;
 
+
+    FragmentAllAudios fragmentAllAudios;
+    private TabLayout tabLayout;
+    private ViewPager viewPager;
+    private ViewPagerAdapter viewPagerAdapteradapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -88,6 +94,20 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+
+        tabLayout = findViewById(R.id.tablayout_id);
+        viewPager = findViewById(R.id.viewpager_id);
+        viewPagerAdapteradapter = new ViewPagerAdapter(getSupportFragmentManager());
+
+        //add fragment here
+        fragmentAllAudios = new FragmentAllAudios();
+        viewPagerAdapteradapter.addFragment(fragmentAllAudios,"Songs");
+        viewPagerAdapteradapter.addFragment(new FragmentSortByAutor(),"Autors");
+        viewPagerAdapteradapter.addFragment(new FragmentSortByAlbum(),"Albums");
+
+        viewPager.setAdapter(viewPagerAdapteradapter);
+
         mActionBar = getSupportActionBar();
         mActionBar.setDisplayShowTitleEnabled(false);
         LayoutInflater mInflater = LayoutInflater.from(this);
@@ -96,10 +116,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         mActionBar.setCustomView(mCustomView);
         mActionBar.setDisplayShowCustomEnabled(true);
         progressBar = findViewById(R.id.progressBar);
-        progressBar.setVisibility(View.VISIBLE);
+       // progressBar.setVisibility(View.VISIBLE);
         loadingData = findViewById(R.id.loadingData);
-        loadingData.setVisibility(View.VISIBLE);
-        recyclerView = findViewById(R.id.recyclerview);
+        //loadingData.setVisibility(View.VISIBLE);
         setShuffle = false;
 
        // checkPermissions();
@@ -112,18 +131,19 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
         }else {
+            audioList = storageUtil.loadAudio();
+            if (audioList!=null){
+                setActionBarText((audioList.get(storageUtil.loadAudioIndex()).getArtist()) + " : " +
+                        audioList.get(storageUtil.loadAudioIndex()).getTitle());
+            }
             initDB();
             //load from DB
-            audioList = storageUtil.loadAudio();
-            if (audioList==null){
-           //if (audioList.size()<=0)
+            //audioList = storageUtil.loadAudio();
+           // if (audioList==null){
             loadFromDB();
-            initRecyclerView(audioList);
-            }
-            else {initRecyclerView(audioList);
-            setActionBarText((audioList.get(storageUtil.loadAudioIndex()).getArtist()) + " : " +
-                    audioList.get(storageUtil.loadAudioIndex()).getTitle());
-            }
+            //}
+           // else {
+
 
         }
         InstanceOfMainActivity.mainActivity = this;
@@ -138,25 +158,17 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         mTitleTextView.setText(myText);
     }
 
-    private void initRecyclerView(final ArrayList audioList) {
+/*    private void initRecyclerView() {
 
         if (audioList.size() > 0) {
             progressBar.setVisibility(View.INVISIBLE);
             loadingData.setVisibility(View.INVISIBLE);
-            adapter = new RecyclerView_Adapter(audioList, getApplication());
-            recyclerView.setAdapter(adapter);
-            recyclerView.setLayoutManager(new LinearLayoutManager(this));
-            recyclerView.setVisibility(View.VISIBLE);
-            recyclerView.addOnItemTouchListener(new CustomTouchListener(this, new onItemClickListener() {
-                @Override
-                public void onClick(View view, int index) {
-                    playAudio(index, audioList);
-
-                }
-            }));
+           //fragmentAllAudios.updateRV();
         }
         else Toast.makeText(this,getResources().getString(R.string.nothing_found),Toast.LENGTH_SHORT).show();
-    }
+
+
+    }*/
 
     //Binding this Client to the AudioPlayer Service
     private ServiceConnection serviceConnection = new ServiceConnection() {
@@ -178,9 +190,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
     };
 
-    private void playAudio(int audioIndex, ArrayList audioList) {
-        //Check is service active
-       // if (!serviceBound) {
+    /*private*/ void playAudio(int audioIndex, ArrayList<Audio> audioList) {
         if (player==null){
             //Store Serializable audioList to SharedPreferences
             StorageUtil storage = new StorageUtil(getApplicationContext());
@@ -192,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE);
         } else {
             //Store the new audioIndex to SharedPreferences
-            Log.i("sb",String.valueOf(serviceBound));
+            Log.i("playAudio",String.valueOf(audioList.get(audioIndex).getTitle()));
 
             StorageUtil storage = new StorageUtil(getApplicationContext());
             storage.storeAudio(audioList);
@@ -205,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         }
     }
       public void notifyDataSetChanged(){
-      adapter.notifyDataSetChanged();
+      fragmentAllAudios.notifyDataSetChanged();
     }
 
     //retrieves the data from the device in ascending order
@@ -264,18 +274,18 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
         cursor.moveToFirst();
          do {
+             String album = cursor.getString(cursor.getColumnIndex("album"));
+             String artist = cursor.getString(cursor.getColumnIndex("artist"));
             Audio audio = new Audio(cursor.getString(
                     cursor.getColumnIndex("data")),
                     cursor.getString(cursor.getColumnIndex("title")),
-                    cursor.getString(cursor.getColumnIndex("album")),
-                    cursor.getString(cursor.getColumnIndex("artist")),
+                    album, artist,
                     cursor.getString(cursor.getColumnIndex("artPath")),
                     cursor.getString(cursor.getColumnIndex("duration")));
             audioList.add(audio);
             size++;
         }while (cursor.moveToNext());
          cursor.close();
-
         }
         else loadAudio();
 
@@ -296,9 +306,8 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         if (audioListSearch.size()>0)
         mTitleTextView.setText((getResources().getString(R.string.search) +" " + "\"" +  search + "\""));
 
-
-        initRecyclerView(audioListSearch);
         cursor.close();
+        fragmentAllAudios.updateRV(audioListSearch);
     }
 
     /**
@@ -314,7 +323,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.reset_db:
-                recyclerView.setVisibility(View.INVISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
                 loadingData.setVisibility(View.VISIBLE);
                 final Runnable runLoadData = new Runnable() {
@@ -326,7 +334,10 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 final Runnable runInitRV = new Runnable() {
                     @Override
                     public void run() {
-                        initRecyclerView(audioList);
+
+                        fragmentAllAudios.updateRV(audioList);
+                        progressBar.setVisibility(View.INVISIBLE);
+                        loadingData.setVisibility(View.INVISIBLE);
                     }
                 };
                 Thread mythread = new Thread(new Runnable() {
@@ -342,7 +353,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                 return true;
             case R.id.home:
                 // go back to audioList intstead of audioListSearch
-                initRecyclerView(audioList);
+                fragmentAllAudios.updateRV(audioList);
                 //hide up button
                 mActionBar.setDisplayHomeAsUpEnabled(false);
                 return true;
@@ -350,24 +361,24 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             case R.id.order_id_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " ASC");
                 loadFromDB();
-                initRecyclerView(audioList);
+                fragmentAllAudios.updateRV(audioList);
                 return true;
 
             case R.id.order_id_desc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_TITLE + " DESC");
                 loadFromDB();
-                initRecyclerView(audioList);
+                fragmentAllAudios.updateRV(audioList);
                 return true;
 
             case R.id.order_name_asc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " ASC");
                 loadFromDB();
-                initRecyclerView(audioList);
+                fragmentAllAudios.updateRV(audioList);
                 return true;
             case R.id.order_name_desc:
                 dbHelper.setOrderBy(SQLAdapter.Audios.COLUMN_NAME_ARTIST + " DESC");
                 loadFromDB();
-                initRecyclerView(audioList);
+                fragmentAllAudios.updateRV(audioList);
                 return true;
             case  R.id.privacy:
                 Intent intent = new Intent(this,AboutActivity.class);
@@ -381,7 +392,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
         if ((keyCode == KeyEvent.KEYCODE_BACK)&& letUseKeyBack)
         {
             // go back to audioList intstead of audioListSearch
-            initRecyclerView(audioList);
+            fragmentAllAudios.updateRV(audioList);
             //hide up button
             //mActionBar.setDisplayHomeAsUpEnabled(false);
             letUseKeyBack=false;
@@ -554,7 +565,6 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
     }
 
     private void initPlayMenu() {
-        LinearLayout playMenu = findViewById(R.id.play_menu_layout);
         play = findViewById(R.id.play);
         previous = findViewById(R.id.previous);
         next = findViewById(R.id.next);
@@ -594,16 +604,16 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             @Override
             public void onClick(View v) {
                 setShuffle = !setShuffle;
+                if (player!=null)
                 player.setShuffle(setShuffle);
                 if (setShuffle){
                     shuffle.setBackgroundColor(getResources().getColor(R.color.colorOrange));
                 }
                 else {
-                shuffle.setBackgroundColor(getResources().getColor(R.color.colorPrimaryMedium));
+                shuffle.setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
                 }
             }
         });
-
         previous.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -642,6 +652,9 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
 
         });
     }
+    public boolean getShuffle(){
+        return setShuffle;
+    }
 
 
     public void buildNotification(PlaybackStatus playbackStatus) {
@@ -664,7 +677,7 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
                     // access granted
                     initDB();
                     loadFromDB();
-                    initRecyclerView(audioList);
+                    fragmentAllAudios.updateRV(audioList);
                 } else {
                     // access denied
                     closeNow();
@@ -681,6 +694,11 @@ public class MainActivity extends AppCompatActivity implements  MediaPlayerContr
             finish();
         }
     }
+    public ArrayList<Audio> getArray(){
+        return audioList;
+    }
+
+
     private void creatAlertDialog(){
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("No audio found");

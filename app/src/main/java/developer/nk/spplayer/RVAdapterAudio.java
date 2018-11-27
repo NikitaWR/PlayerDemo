@@ -2,43 +2,35 @@ package developer.nk.spplayer;
 
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Binder;
-import android.provider.CalendarContract;
+import android.support.annotation.NonNull;
 import android.support.v7.graphics.Palette;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
-import android.widget.Toast;
+
+import com.simplecityapps.recyclerview_fastscroll.views.FastScrollRecyclerView;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.List;
 
-import static android.content.Intent.getIntent;
-import static android.content.Intent.makeMainActivity;
+public class RVAdapterAudio extends RecyclerView.Adapter<ViewHolder> implements FastScrollRecyclerView.SectionedAdapter {
 
-public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
-
-    List<Audio> list = Collections.emptyList();
-    Context context;
-    int audioIndex;
+   private List<Audio> list;
+   private Context context;
+   private int audioIndex;
 
 
 
 
-    public RecyclerView_Adapter(List<Audio> list, Context context) {
+    public RVAdapterAudio(List<Audio> list, Context context) {
         this.list = list;
         this.context = context;
     }
@@ -47,7 +39,7 @@ public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         //Inflate the layout, initialize the View Holder
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_layout, parent, false);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_audio, parent, false);
         ViewHolder holder = new ViewHolder(v);
         return holder;
     }
@@ -129,24 +121,10 @@ public class RecyclerView_Adapter extends RecyclerView.Adapter<ViewHolder> {
         super.onAttachedToRecyclerView(recyclerView);
     }
 
-}
-
-class ViewHolder extends RecyclerView.ViewHolder {
-
-    TextView title;
-    TextView duration;
-    RelativeLayout item;
-    ImageView imageView;
-    //LinearLayout mainL;
-    ViewHolder(final View itemView) {
-        super(itemView);
-        title = itemView.findViewById(R.id.title);
-        duration = itemView.findViewById(R.id.duration);
-        item = itemView.findViewById(R.id.item);
-        imageView = itemView.findViewById(R.id.imageView);
-        //mainL = InstanceOfMainActivity.mainActivity.findViewById(R.id.main_play_menu_layout);
-
-
-
+    @NonNull
+    @Override
+    public String getSectionName(int position) {
+        return String.valueOf(position+1);
     }
 }
+

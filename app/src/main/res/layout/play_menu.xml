@@ -21,20 +21,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-                <ImageButton
-                    android:id="@+id/search"
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:layout_alignParentEnd="true"
-                    android:background="@color/colorPrimaryMedium"
-                    app:srcCompat="@drawable/ic_action_search" />
-
-                <ImageButton
-                    android:id="@+id/shuffle_play"
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:background="@color/colorPrimaryMedium"
-                    app:srcCompat="@drawable/ic_action_shuffle" />
             </RelativeLayout>
 
             <RelativeLayout
@@ -79,12 +65,22 @@
             android:orientation="horizontal">
 
             <ImageButton
+                android:id="@+id/search"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/button_background"
+                android:tint="@color/colorPrimary"
+                app:srcCompat="@drawable/ic_action_search" />
+
+            <ImageButton
                 android:id="@+id/previous"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:tint="@color/colorPrimaryDark"
+                android:background="@drawable/button_background"
                 android:visibility="visible"
+                android:tint="@color/colorPrimary"
                 app:srcCompat="@drawable/ic_action_previous" />
 
             <ImageButton
@@ -92,18 +88,29 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:tint="@color/colorPrimaryDark"
+                android:background="@drawable/button_background"
                 android:visibility="visible"
+                android:tint="@color/colorPrimary"
                 app:srcCompat="@drawable/ic_action_play" />
 
             <ImageButton
                 android:id="@+id/next"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:tint="@color/colorPrimaryDark"
+                android:background="@drawable/button_background"
                 android:visibility="visible"
+                android:tint="@color/colorPrimary"
                 app:srcCompat="@drawable/ic_action_next" />
+
+            <ImageButton
+                android:id="@+id/shuffle_play"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/button_background"
+                android:tint="@color/colorPrimary"
+                app:srcCompat="@drawable/ic_action_shuffle" />
 
         </LinearLayout>
 

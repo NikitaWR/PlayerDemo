@@ -693,6 +693,7 @@ Log.i("MediaPlayerService","resume media");
             StorageUtil storage = new StorageUtil(getApplicationContext());
             audioList = storage.loadAudio();
             audioIndex = storage.loadAudioIndex();
+            setShuffle(InstanceOfMainActivity.mainActivity.getShuffle());
 
             if (audioIndex != -1 && audioIndex < audioList.size()) {
                 //index is in a valid range
